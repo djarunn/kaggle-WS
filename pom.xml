@@ -19,6 +19,16 @@
     <spark.version>2.0.0</spark.version>
   </properties>
   <dependencies>
+    <dependency>
+      <groupId>net.sourceforge.argparse4j</groupId>
+      <artifactId>argparse4j</artifactId>
+        <version>0.7.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.log4s</groupId>
+      <artifactId>log4s_${scala.binary.version}</artifactId>
+      <version>1.3.4</version>
+    </dependency>
     <!-- Spark related -->
     <dependency>
       <groupId>org.apache.spark</groupId>
