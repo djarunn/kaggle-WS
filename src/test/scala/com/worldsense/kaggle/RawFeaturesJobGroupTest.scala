@@ -3,10 +3,7 @@ package com.worldsense.kaggle
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
-import com.worldsense.basic.Zip
-import com.worldsense.indexer.JobGroupSpec
-import com.worldsense.spark.HadoopUtils
-
+/*
 // scalastyle:off magic.number
 @RunWith(classOf[JUnitRunner])
 class RawFeaturesJobGroupTest extends JobGroupSpec {
@@ -27,3 +24,4 @@ class RawFeaturesJobGroupTest extends JobGroupSpec {
     assert(rawFeatures.count() === 2*100)
   }
 }
+*/

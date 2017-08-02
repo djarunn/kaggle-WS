@@ -6,8 +6,7 @@ import org.apache.commons.io.FileUtils
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
-import com.worldsense.indexer.JobGroupSpec
-import com.worldsense.spark.HadoopUtils
+/*
 
 // scalastyle:off magic.number
 @RunWith(classOf[JUnitRunner])
@@ -33,3 +32,4 @@ class SubmissionJobGroupTest extends JobGroupSpec {
     assert(submission.count() == 100 + 1)  // rows plus header
   }
 }
+*/

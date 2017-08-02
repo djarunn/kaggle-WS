@@ -7,6 +7,7 @@ import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
+/*
 import com.worldsense.indexer.JobGroupSpec
 import com.worldsense.spark.HadoopUtils
 
@@ -39,3 +40,4 @@ class ModelJobGroupTest extends JobGroupSpec {
     assert(vectors.columns.contains("question2_stopworded_tokens_vector_lda"))
   }
 }
+*/

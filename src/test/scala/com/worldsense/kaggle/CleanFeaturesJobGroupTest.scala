@@ -6,10 +6,8 @@ import org.apache.commons.io.FileUtils
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
-import com.worldsense.indexer.JobGroupSpec
-import com.worldsense.spark.HadoopUtils
-
 // scalastyle:off magic.number
+/*
 @RunWith(classOf[JUnitRunner])
 class CleanFeaturesJobGroupTest extends JobGroupSpec {
   import spark.implicits._
@@ -27,3 +25,4 @@ class CleanFeaturesJobGroupTest extends JobGroupSpec {
     assert(cleanFeatures.count() === 2*100)
   }
 }
+*/

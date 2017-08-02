@@ -7,6 +7,7 @@ import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
+/*
 import com.worldsense.indexer.JobGroupSpec
 import com.worldsense.spark.HadoopUtils
 
@@ -38,3 +39,4 @@ class CrossValidateJobGroupTest extends JobGroupSpec {
     assert(predictions.columns.contains("p"))
   }
 }
+*/
