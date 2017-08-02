@@ -1,10 +1,18 @@
 package com.worldsense.kaggle
 
+import org.apache.spark.ml.Estimator
+import org.apache.spark.ml.classification.LogisticRegression
+import org.apache.spark.ml.clustering.LDA
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
-import org.apache.spark.ml.param.Param
-import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
+import org.apache.spark.ml.feature.CountVectorizer
+import org.apache.spark.ml.param.{Param, ParamMap}
+import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
+import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
+import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.types.StructType
 
-class QuoraQuestionsPairsCrossValidator extends CrossValidator {
+class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estimator[CrossValidatorModel] with DefaultParamsWritable {
+  def this() = this(Identifiable.randomUID("quoraquestionspairscrossvalidator"))
   private val logger = org.log4s.getLogger
     final val vocabularySize: Param[Array[Int]] = new Param[Array[Int]](this, "vocabularySize", "comma separate input column names")
   setDefault(vocabularySize, Array(1000,1000000))
@@ -19,14 +27,24 @@ class QuoraQuestionsPairsCrossValidator extends CrossValidator {
   final val lrMaxIterations: Param[Array[Int]] = new Param[Array[Int]](this, "ldaMaxIterations", "comma separate input column names")
   setDefault(lrMaxIterations, Array(3))
 
-  private def assembleCrossValidator = {
+  override def transformSchema(schema: StructType): StructType = assembleCrossValidator().transformSchema(schema)
+  override def fit(dataset: Dataset[_]): CrossValidatorModel = assembleCrossValidator().fit(dataset)
+  def copy(extra: ParamMap): QuoraQuestionsPairsCrossValidator = defaultCopy(extra)
+
+  private def assembleCrossValidator(): CrossValidator = {
+    val countVectorizer = new CountVectorizer()
+    val logisticRegression = new LogisticRegression()
+    val lda = new LDA()
     val estimator = new QuoraQuestionsPairsPipeline()
+      .setCountVectorizer(countVectorizer)
+      .setLogisticRegression(logisticRegression)
+      .setLDA(lda)
     // Grid search on hyperparameter space
     val paramGrid = new ParamGridBuilder()
-      .addGrid(estimator.countVectorizer.vocabSize, $(vocabularySize))
-      .addGrid(estimator.countVectorizer.minDF, $(minDF))
-      .addGrid(estimator.logisticRegression.regParam, $(regularization))
-      .addGrid(estimator.latentDirichletAllocator.k, $(numTopics))
+      .addGrid(countVectorizer.vocabSize, $(vocabularySize))
+      .addGrid(countVectorizer.minDF, $(minDF))
+      .addGrid(logisticRegression.regParam, $(regularization))
+      .addGrid(lda.k, $(numTopics))
       .build()
 
     val evaluator = new BinaryClassificationEvaluator()
@@ -43,3 +61,5 @@ class QuoraQuestionsPairsCrossValidator extends CrossValidator {
         .setNumFolds(numFolds)
   }
 }
+
+object QuoraQuestionsPairsCrossValidator extends DefaultParamsReadable[QuoraQuestionsPairsCrossValidator]

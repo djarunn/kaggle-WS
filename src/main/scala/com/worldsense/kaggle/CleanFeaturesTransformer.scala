@@ -19,11 +19,11 @@ import org.apache.spark.sql.{DataFrame, Dataset, Encoders}
 
 class CleanFeaturesTransformer(override val uid: String) extends Transformer with DefaultParamsWritable {
   def this() = this(Identifiable.randomUID("cleanfeatures"))
-
   def copy(extra: ParamMap): FeaturesTransformer = defaultCopy(extra)
 
   override def transformSchema(schema: StructType): StructType = Encoders.product[Features].schema
   def transform(ds: Dataset[_]): DataFrame = {
+    import ds.sparkSession.implicits.newProductEncoder
     val features = ds.as[Features]
     val cleanFeatures = features map { row =>
       row.copy(

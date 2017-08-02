@@ -27,7 +27,7 @@ class FeaturesTransformer(override val uid: String) extends Transformer with Def
   def transform(df: Dataset[_]): DataFrame = {
     val spark = df.sparkSession
     val csvOptions = Map("header" -> "true", "escape" -> "\"")
-    val trainDF = spark.read.options(csvOptions).csv($(trainFile)).withColumn("source", lit("train"))
+    val trainDF = spark.read.options(csvOptions).csv($(trainFile))
     trainDF.selectExpr(
       "cast(id as int) id",
       "cast(qid1 as int) qid1",
