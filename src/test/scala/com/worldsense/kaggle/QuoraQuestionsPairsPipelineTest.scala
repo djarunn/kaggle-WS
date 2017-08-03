@@ -18,7 +18,7 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
       question1 = question1, question2 = question2,
       isDuplicate = isDuplicate)
   }
-  "QuoraQuestionsPairsPipeline" should "serialize back and forth" in {
+  "QuoraQuestionsPairsPipeline" should "train a simple model" in {
     import spark.implicits._
     val estimator = new QuoraQuestionsPairsPipeline()
     val ds = spark.createDataset(features)
