@@ -20,16 +20,11 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
   }
   "QuoraQuestionsPairsPipeline" should "serialize back and forth" in {
     import spark.implicits._
-    val tmpdir: Path = Files.createTempDirectory("qqpptest")
-
-    val estimatorDir: Path = Paths.get(tmpdir.toString, "estimator")
     val estimator = new QuoraQuestionsPairsPipeline()
     val ds = spark.createDataset(features)
     val p = estimator.fit(ds).transform(ds)
     assert(p.count() === features.length)
     val dupCount = p.select("prediction").as[Double].collect().count(_ > 0)
     assert(dupCount >= 10 && dupCount <= 90)  // learned something
-
-    new File(tmpdir.toUri).delete()
   }
 }

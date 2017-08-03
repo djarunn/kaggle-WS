@@ -13,23 +13,33 @@ import org.apache.spark.sql.types.StructType
 class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[PipelineModel] {
   def this() = this(Identifiable.randomUID("quoraquestionspairspipeline"))
 
-  val tokenizerParam: Param[Tokenizer] = new Param(this, "tokenizer", "estimator for selection")
+  val cleanFeaturesTransformerParam: Param[CleanFeaturesTransformer] =
+    new Param(this, "cleaner", "Cleans the input text.")
+  def setCleanFeaturesTransformer(value: CleanFeaturesTransformer): this.type = set(cleanFeaturesTransformerParam, value)
+  setDefault(cleanFeaturesTransformerParam, new CleanFeaturesTransformer())
+
+  val tokenizerParam: Param[Tokenizer] =
+    new Param(this, "tokenizer", "Breaks input text into tokens.")
   def setTokenizer(value: Tokenizer): this.type = set(tokenizerParam, value)
   setDefault(tokenizerParam, new Tokenizer)
 
-  val stopwordsRemoverParam: Param[StopWordsRemover] = new Param(this, "stopwords", "estimator for selection")
+  val stopwordsRemoverParam: Param[StopWordsRemover] =
+    new Param(this, "stopwords", "Drops stopwords from input text.")
   def setStopwordsRemover(value: StopWordsRemover): this.type = set(stopwordsRemoverParam, value)
   setDefault(stopwordsRemoverParam, new StopWordsRemover())
 
-  val countVectorizerParam: Param[CountVectorizer] = new Param(this, "countVectorizer", "estimator for selection")
+  val countVectorizerParam: Param[CountVectorizer] =
+    new Param(this, "countVectorizer", "Convert input tokens into weighted vectors.")
   def setCountVectorizer(value: CountVectorizer): this.type = set(countVectorizerParam, value)
   setDefault(countVectorizerParam, new CountVectorizer())
 
-  val ldaParam: Param[LDA] = new Param(this, "lda", "estimator for selection")
+  val ldaParam: Param[LDA] =
+    new Param(this, "lda", "Convert each question into a weighted topic vector.")
   def setLDA(value: LDA): this.type = set(ldaParam, value)
   setDefault(ldaParam, new LDA())
 
-  val logisticRegressionParam: Param[LogisticRegression] = new Param(this, "logisticRegression", "estimator for selection")
+  val logisticRegressionParam: Param[LogisticRegression] =
+    new Param(this, "logisticRegression", "Combine question vectors pairs into a predicted probability.")
   def setLogisticRegression(value: LogisticRegression): this.type = set(logisticRegressionParam, value)
   setDefault(logisticRegressionParam, new LogisticRegression())
 

@@ -3,14 +3,12 @@ package com.worldsense.kaggle
 import java.io.File
 import java.nio.file.{Files, Path, Paths}
 
-import com.holdenkarau.spark.testing.SharedSparkContext
+import com.holdenkarau.spark.testing.DataFrameSuiteBase
 import org.apache.spark.ml.feature.Tokenizer
-import org.apache.spark.sql.SQLContext
 import org.scalatest.FlatSpec
 
-class MultiColumnPipelineTest extends FlatSpec with SharedSparkContext {
+class MultiColumnPipelineTest extends FlatSpec with DataFrameSuiteBase {
   "MultiColumnPipelineTest" should "serialize back and forth" in {
-    val spark = new SQLContext(sc).sparkSession
     import spark.implicits._
     val tmpdir: Path = Files.createTempDirectory("mcpipelinetest")
     val tokenizerDir: Path = Paths.get(tmpdir.toString, "ds")
