@@ -13,31 +13,32 @@ import org.apache.spark.sql.types.StructType
 
 class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estimator[CrossValidatorModel] {
   def this() = this(Identifiable.randomUID("quoraquestionspairscrossvalidator"))
+  val numFolds = 5
   private val logger = org.log4s.getLogger
 
-  final val vocabularySize: Param[Array[Int]] = new Param[Array[Int]](this, "vocabularySize", "comma separate input column names")
-  def setVocabularySize(value: Array[Int]): this.type = set(vocabularySize, value)
-  setDefault(vocabularySize, Array(1000,1000000))
+  final val vocabularySize: Param[List[Int]] = new Param[List[Int]](this, "vocabularySize", "comma separate input column names")
+  def setVocabularySize(value: List[Int]): this.type = set(vocabularySize, value)
+  setDefault(vocabularySize, List(1000,1000000))
 
-  final val regularization: Param[Array[Double]] = new Param[Array[Double]](this, "regularization", "comma separate input column names")
-  def setRegularization(value: Array[Double]): this.type = set(regularization, value)
-  setDefault(regularization, Array(0.01,0.1,1.0))
+  final val regularization: Param[List[Double]] = new Param[List[Double]](this, "regularization", "comma separate input column names")
+  def setRegularization(value: List[Double]): this.type = set(regularization, value)
+  setDefault(regularization, List(0.01,0.1,1.0))
 
-  final val numTopics: Param[Array[Int]] = new Param[Array[Int]](this, "numTopics", "comma separate input column names")
-  def setNumTopics(value: Array[Int]): this.type = set(numTopics, value)
-  setDefault(numTopics, Array(10,20,50))
+  final val numTopics: Param[List[Int]] = new Param[List[Int]](this, "numTopics", "comma separate input column names")
+  def setNumTopics(value: List[Int]): this.type = set(numTopics, value)
+  setDefault(numTopics, List(10,20,50))
 
-  final val minDF: Param[Array[Double]] = new Param[Array[Double]](this, "minDF", "comma separate input column names")
-  def setMinDF(value: Array[Double]): this.type = set(minDF, value)
-  setDefault(minDF, Array(3.0))
+  final val minDF: Param[List[Double]] = new Param[List[Double]](this, "minDF", "comma separate input column names")
+  def setMinDF(value: List[Double]): this.type = set(minDF, value)
+  setDefault(minDF, List(3.0))
 
-  final val ldaMaxIter: Param[Array[Int]] = new Param[Array[Int]](this, "ldaMaxIter", "comma separate input column names")
-  def setLdaMaxIter(value: Array[Int]): this.type = set(ldaMaxIter, value)
-  setDefault(ldaMaxIter, Array(3))
+  final val ldaMaxIter: Param[List[Int]] = new Param[List[Int]](this, "ldaMaxIter", "comma separate input column names")
+  def setLdaMaxIter(value: List[Int]): this.type = set(ldaMaxIter, value)
+  setDefault(ldaMaxIter, List(3))
 
-  final val logisticRegressionMaxIter: Param[Array[Int]] = new Param[Array[Int]](this, "logisticRegressionMaxIter", "comma separate input column names")
-  def setLogisticRegressionMaxIter(value: Array[Int]): this.type = set(logisticRegressionMaxIter, value)
-  setDefault(logisticRegressionMaxIter, Array(3))
+  final val logisticRegressionMaxIter: Param[List[Int]] = new Param[List[Int]](this, "logisticRegressionMaxIter", "comma separate input column names")
+  def setLogisticRegressionMaxIter(value: List[Int]): this.type = set(logisticRegressionMaxIter, value)
+  setDefault(logisticRegressionMaxIter, List(3))
 
   override def transformSchema(schema: StructType): StructType = assembleCrossValidator().transformSchema(schema)
   override def fit(dataset: Dataset[_]): CrossValidatorModel = assembleCrossValidator().fit(dataset)
@@ -65,7 +66,6 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
         .setMetricName("areaUnderROC")
 
     // Cross-validation setup
-    val numFolds = 5
     new CrossValidator()
         .setEstimator(estimator)
         .setEvaluator(evaluator)

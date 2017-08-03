@@ -30,6 +30,9 @@ object Main extends App {
   def run(trainingDataFile: String, testDataFile: String, submissionFile: String): Unit = {
     val trainData = featuresLoader.loadTrainFile(spark, trainingDataFile)
     val estimator = new QuoraQuestionsPairsCrossValidator
+    logger.info(s"Cross validator params:\n${estimator.explainParams()}")
+    val numVariations = estimator.extractParamMap().toSeq.map(_.value.asInstanceOf[List[_]].length).sum
+    logger.info(s"Cross validator will train $numVariations * ${estimator.numFolds} models")
     val model = estimator.fit(trainData)
 
     val testData = featuresLoader.loadTestFile(spark, testDataFile)

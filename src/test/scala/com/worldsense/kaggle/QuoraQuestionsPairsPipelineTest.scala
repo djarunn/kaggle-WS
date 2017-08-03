@@ -17,7 +17,6 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
       question1 = question1, question2 = question2,
       isDuplicate = isDuplicate)
   }
-  private val logger = org.log4s.getLogger
   "QuoraQuestionsPairsPipeline" should "train a simple model" in {
     import spark.implicits.{newDoubleEncoder, newProductEncoder}
     val estimator = new QuoraQuestionsPairsPipeline()

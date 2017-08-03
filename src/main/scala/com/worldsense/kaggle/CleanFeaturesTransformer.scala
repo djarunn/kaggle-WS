@@ -1,16 +1,5 @@
 package com.worldsense.kaggle
 
-/** Consumes a dataframe from RawFeaturesJobGroup and cleans the data on it.
- *
- * Besides simple data transformations and empty value handling, this cleans the text using
- * worldsense bow machinery, then rewrites the cleaner version of the
- * text as CleanFeaturesJobGroup.Features, which can be easily processed by subsequent pipelines.
- *
- * The cleaning strategy simply delegates to existing worldsense pipeline, which will parse the
- * questions as if they were HTML documents, generate BoW representations, and then assemble
- * then again.
- */
-
 import com.ibm.icu.text.{Normalizer2, Transliterator}
 import com.worldsense.kaggle.FeaturesLoader.Features
 import org.apache.spark.ml.Transformer
@@ -20,12 +9,14 @@ import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders}
 
 class CleanFeaturesTransformer(override val uid: String) extends Transformer with DefaultParamsWritable {
-  def this() = this(Identifiable.randomUID("cleanfeatures"))
-  def copy(extra: ParamMap): CleanFeaturesTransformer = defaultCopy(extra)
+  private val removeDiacriticalsParam: Param[Boolean] = new Param(this, "tokenizer", "estimator for selection")
 
-  val removeDiacriticalsParam: Param[Boolean] = new Param(this, "tokenizer", "estimator for selection")
-  def setTokenizer(value: Boolean): this.type = set(removeDiacriticalsParam, value)
+  def this() = this(Identifiable.randomUID("cleanfeatures"))
+
+  def copy(extra: ParamMap): CleanFeaturesTransformer = defaultCopy(extra)
   setDefault(removeDiacriticalsParam, true)
+
+  def setRemoveDiacriticals(value: Boolean): this.type = set(removeDiacriticalsParam, value)
 
   override def transformSchema(schema: StructType): StructType = Encoders.product[Features].schema
   def transform(ds: Dataset[_]): DataFrame = {
