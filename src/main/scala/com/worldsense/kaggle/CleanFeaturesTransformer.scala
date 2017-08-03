@@ -12,6 +12,7 @@ package com.worldsense.kaggle
  */
 
 import com.ibm.icu.text.{Normalizer2, Transliterator}
+import com.worldsense.kaggle.FeaturesLoader.Features
 import org.apache.spark.ml.Transformer
 import org.apache.spark.ml.param.{Param, ParamMap}
 import org.apache.spark.ml.util.{DefaultParamsWritable, Identifiable}

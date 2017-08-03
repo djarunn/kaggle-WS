@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.{Files, Path, Paths}
 
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
+import com.worldsense.kaggle.FeaturesLoader.Features
 import org.scalatest.FlatSpec
 
 import scala.util.Random

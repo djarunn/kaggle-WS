@@ -1,6 +1,7 @@
 package com.worldsense.kaggle
 
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
+import com.worldsense.kaggle.FeaturesLoader.Features
 import org.scalatest.FlatSpec
 
 class CleanFeaturesTransformerTest extends FlatSpec with DataFrameSuiteBase {
