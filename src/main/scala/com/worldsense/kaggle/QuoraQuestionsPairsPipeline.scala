@@ -4,7 +4,7 @@ import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.clustering.LDA
 import org.apache.spark.ml.feature._
 import org.apache.spark.ml.param.{Param, ParamMap}
-import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
+import org.apache.spark.ml.util.Identifiable
 import org.apache.spark.ml.{Estimator, Pipeline, PipelineModel, PipelineStage}
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType

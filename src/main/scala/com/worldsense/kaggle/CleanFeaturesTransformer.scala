@@ -20,7 +20,7 @@ import org.apache.spark.sql.{DataFrame, Dataset, Encoders}
 
 class CleanFeaturesTransformer(override val uid: String) extends Transformer with DefaultParamsWritable {
   def this() = this(Identifiable.randomUID("cleanfeatures"))
-  def copy(extra: ParamMap): FeaturesTransformer = defaultCopy(extra)
+  def copy(extra: ParamMap): CleanFeaturesTransformer = defaultCopy(extra)
 
   val removeDiacriticalsParam: Param[Boolean] = new Param(this, "tokenizer", "estimator for selection")
   def setTokenizer(value: Boolean): this.type = set(removeDiacriticalsParam, value)
