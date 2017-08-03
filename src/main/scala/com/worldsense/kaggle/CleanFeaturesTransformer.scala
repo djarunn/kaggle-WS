@@ -31,8 +31,9 @@ class CleanFeaturesTransformer(override val uid: String) extends Transformer wit
     import CleanFeaturesTransformer.normalize
     import ds.sparkSession.implicits.newProductEncoder
     // We replace null cells with the most straightforward default values.
-    val features = ds.na.fill(0).na.fill("").as[Features]
-    val cleanFeatures = features map { row =>
+    val features = ds.na.fill(0).na.fill("").na.fill(Map("isDuplicate" -> false)).as[Features]
+    val valid = features.filter(row => Option(row.isDuplicate).nonEmpty)
+    val cleanFeatures = valid.map { row =>
       row.copy(
         question1 = normalize(row.question1, $(removeDiacriticalsParam)),
         question2 = normalize(row.question2, $(removeDiacriticalsParam))

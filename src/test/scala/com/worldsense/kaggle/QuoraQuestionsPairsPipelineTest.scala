@@ -1,7 +1,6 @@
 package com.worldsense.kaggle
 
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
-import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.clustering.LDA
 import org.scalatest.FlatSpec
 
@@ -19,7 +18,7 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
   }
   private val logger = org.log4s.getLogger
   "QuoraQuestionsPairsPipeline" should "train a simple model" in {
-    import spark.implicits.{newProductEncoder, newDoubleEncoder}
+    import spark.implicits.{newDoubleEncoder, newProductEncoder}
     val estimator = new QuoraQuestionsPairsPipeline()
     // Tune LDA to make learning easier since vocab is very small
     estimator.setLDA(new LDA().setK(3))

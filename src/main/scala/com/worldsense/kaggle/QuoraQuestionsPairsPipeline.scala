@@ -53,12 +53,16 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     val vectorized = tokenized.map(q => s"${q}_vector")
     val ldaed = vectorized.map(q => s"${q}_lda")
 
+    val cleaner = cleanerPipeline()
     val tokenizer = tokenizePipeline(questions)
     val vectorizer = vectorizePipeline(tokenized)
     val lda = ldaPipeline(vectorized)
     val lr = probabilityPipeline(ldaed)
-    val stages = Array(tokenizer, vectorizer, lda, lr).flatten
+    val stages = Array(cleaner, tokenizer, vectorizer, lda, lr).flatten
     new Pipeline().setStages(stages)
+  }
+  def cleanerPipeline(): Array[PipelineStage] = {
+    Array($(cleanFeaturesTransformerParam))
   }
   def tokenizePipeline(columns: Array[String]): Array[PipelineStage] = {
     val mcTokenizer = new MultiColumnPipeline()
