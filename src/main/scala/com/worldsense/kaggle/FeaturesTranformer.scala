@@ -11,7 +11,7 @@ import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders}
 
-case class Features(id: BigInt, qid1: BigInt, qid2: BigInt, question1: String, question2: String, isDuplicate: Boolean, source: String, testId: String)
+case class Features(id: BigInt, qid1: BigInt, qid2: BigInt, question1: String, question2: String, isDuplicate: Boolean)
 
 class FeaturesTransformer(override val uid: String) extends Transformer with DefaultParamsWritable {
   val trainFile = new Param[String](this, "trainFile", "The path for the train file")

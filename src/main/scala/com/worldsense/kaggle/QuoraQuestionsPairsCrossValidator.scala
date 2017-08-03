@@ -11,21 +11,33 @@ import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, I
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
 
-class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estimator[CrossValidatorModel] with DefaultParamsWritable {
+class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estimator[CrossValidatorModel] {
   def this() = this(Identifiable.randomUID("quoraquestionspairscrossvalidator"))
   private val logger = org.log4s.getLogger
-    final val vocabularySize: Param[Array[Int]] = new Param[Array[Int]](this, "vocabularySize", "comma separate input column names")
+
+  final val vocabularySize: Param[Array[Int]] = new Param[Array[Int]](this, "vocabularySize", "comma separate input column names")
+  def setVocabularySize(value: Array[Int]): this.type = set(vocabularySize, value)
   setDefault(vocabularySize, Array(1000,1000000))
+
   final val regularization: Param[Array[Double]] = new Param[Array[Double]](this, "regularization", "comma separate input column names")
+  def setRegularization(value: Array[Double]): this.type = set(regularization, value)
   setDefault(regularization, Array(0.01,0.1,1.0))
+
   final val numTopics: Param[Array[Int]] = new Param[Array[Int]](this, "numTopics", "comma separate input column names")
+  def setNumTopics(value: Array[Int]): this.type = set(numTopics, value)
   setDefault(numTopics, Array(10,20,50))
+
   final val minDF: Param[Array[Double]] = new Param[Array[Double]](this, "minDF", "comma separate input column names")
+  def setMinDF(value: Array[Double]): this.type = set(minDF, value)
   setDefault(minDF, Array(3.0))
-  final val ldaMaxIterations: Param[Array[Int]] = new Param[Array[Int]](this, "ldaMaxIterations", "comma separate input column names")
-  setDefault(ldaMaxIterations, Array(3))
-  final val lrMaxIterations: Param[Array[Int]] = new Param[Array[Int]](this, "ldaMaxIterations", "comma separate input column names")
-  setDefault(lrMaxIterations, Array(3))
+
+  final val ldaMaxIter: Param[Array[Int]] = new Param[Array[Int]](this, "ldaMaxIter", "comma separate input column names")
+  def setLdaMaxIter(value: Array[Int]): this.type = set(ldaMaxIter, value)
+  setDefault(ldaMaxIter, Array(3))
+
+  final val logisticRegressionMaxIter: Param[Array[Int]] = new Param[Array[Int]](this, "logisticRegressionMaxIter", "comma separate input column names")
+  def setLogisticRegressionMaxIter(value: Array[Int]): this.type = set(logisticRegressionMaxIter, value)
+  setDefault(logisticRegressionMaxIter, Array(3))
 
   override def transformSchema(schema: StructType): StructType = assembleCrossValidator().transformSchema(schema)
   override def fit(dataset: Dataset[_]): CrossValidatorModel = assembleCrossValidator().fit(dataset)
@@ -61,5 +73,3 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
         .setNumFolds(numFolds)
   }
 }
-
-object QuoraQuestionsPairsCrossValidator extends DefaultParamsReadable[QuoraQuestionsPairsCrossValidator]

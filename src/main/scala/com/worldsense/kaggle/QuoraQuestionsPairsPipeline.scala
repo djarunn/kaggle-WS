@@ -10,19 +10,25 @@ import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
 
 
-class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[PipelineModel] with DefaultParamsWritable  {
+class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[PipelineModel] {
   def this() = this(Identifiable.randomUID("quoraquestionspairspipeline"))
+
   val tokenizerParam: Param[Tokenizer] = new Param(this, "tokenizer", "estimator for selection")
   def setTokenizer(value: Tokenizer): this.type = set(tokenizerParam, value)
   setDefault(tokenizerParam, new Tokenizer)
-  val stopwordsRemoverParam: Param[StopWordsRemover] = new Param(this, "tokenizer", "estimator for selection")
+
+  val stopwordsRemoverParam: Param[StopWordsRemover] = new Param(this, "stopwords", "estimator for selection")
   def setStopwordsRemover(value: StopWordsRemover): this.type = set(stopwordsRemoverParam, value)
+  setDefault(stopwordsRemoverParam, new StopWordsRemover())
+
   val countVectorizerParam: Param[CountVectorizer] = new Param(this, "countVectorizer", "estimator for selection")
   def setCountVectorizer(value: CountVectorizer): this.type = set(countVectorizerParam, value)
   setDefault(countVectorizerParam, new CountVectorizer())
+
   val ldaParam: Param[LDA] = new Param(this, "lda", "estimator for selection")
   def setLDA(value: LDA): this.type = set(ldaParam, value)
   setDefault(ldaParam, new LDA())
+
   val logisticRegressionParam: Param[LogisticRegression] = new Param(this, "logisticRegression", "estimator for selection")
   def setLogisticRegression(value: LogisticRegression): this.type = set(logisticRegressionParam, value)
   setDefault(logisticRegressionParam, new LogisticRegression())
@@ -41,19 +47,19 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     val vectorizer = vectorizePipeline(tokenized)
     val lda = ldaPipeline(vectorized)
     val lr = probabilityPipeline(ldaed)
-    val stages = Seq(tokenizer, vectorizer, lda, lr).flatten
-    new Pipeline().setStages(stages.toArray)
+    val stages = Array(tokenizer, vectorizer, lda, lr).flatten
+    new Pipeline().setStages(stages)
   }
   def tokenizePipeline(columns: Array[String]): Array[PipelineStage] = {
-    val mcCountVectorizer = new MultiColumnPipeline()
-        .setStage($(countVectorizerParam))
+    val mcTokenizer = new MultiColumnPipeline()
+        .setStage($(tokenizerParam))
         .setInputCols(columns)
         .setOutputCols(columns.map(_ + "_tokens"))
     val mcStopwordsRemover = new MultiColumnPipeline()
         .setStage($(stopwordsRemoverParam))
-        .setInputCols(mcCountVectorizer.getOutputCols)
+        .setInputCols(mcTokenizer.getOutputCols)
         .setOutputCols(columns.map(_ + "_stopworded_tokens"))
-    Array(mcCountVectorizer, mcStopwordsRemover)
+    Array(mcTokenizer, mcStopwordsRemover)
   }
 
   def vectorizePipeline(columns: Array[String]): Array[PipelineStage] = {
@@ -90,5 +96,3 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     Array(assembler, labeler, lr)
   }
 }
-
-object QuoraQuestionsPairsPipeline extends DefaultParamsReadable[QuoraQuestionsPairsPipeline]

@@ -28,7 +28,7 @@ class MultiColumnPipeline(override val uid: String) extends Estimator[PipelineMo
   final def setInputCols(cols: Seq[String]) = set(inputCols, cols.mkString(","))
   final def setOutputCols(cols: Seq[String]) = set(outputCols, cols.mkString(","))
   // The parameter holding the estimator that will be applied to the input columns. Does not use
-  // the Param machinery since that works only with basic types.
+  // the Param machinery since it only supports serialization of basic types.
   private var stage: PipelineStage = new Pipeline()   // identity transformer
   def getStage: PipelineStage = stage
   // Sets the stage, assuming it is already configured to read from tmpInput and write into tmpOutput.
