@@ -35,7 +35,21 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
 
   override def transformSchema(schema: StructType): StructType = assemblePipeline().transformSchema(schema)
 
-  override def fit(dataset: Dataset[_]): PipelineModel = assemblePipeline().fit(dataset)
+  private val logger = org.log4s.getLogger
+  override def fit(dataset: Dataset[_]): PipelineModel = {
+    logger.info(s"Preparing to fit quora question pipeline with params:\n${explainParams()}")
+    assemblePipeline().fit(dataset)
+  }
+
+  override def explainParams(): String = {
+    Seq(
+      $(cleanFeaturesTransformerParam),
+      $(tokenizerParam),
+      $(stopwordsRemoverParam),
+      $(countVectorizerParam),
+      $(ldaParam),
+      $(logisticRegressionParam)).map(_.explainParams()).mkString("\n")
+  }
 
   private def assemblePipeline(): Pipeline = {
     val stages = Array(

@@ -41,7 +41,7 @@ class FeaturesLoader(override val uid: String) extends Transformer with DefaultP
   def loadTestFile(spark: SparkSession, testFile: String): Dataset[Features] = {
    import spark.implicits.newProductEncoder
     val testDF = spark.read.options(csvOptions).csv(testFile)
-    val hashUDF = udf((q: String) => q.hashCode)
+    val hashUDF = udf((q: String) => Option(q).getOrElse("").hashCode)
     val typedTestDF = testDF
       .selectExpr("cast(test_id as int) id", "question1", "question2")
       .withColumn("isDuplicate", lit(false))
