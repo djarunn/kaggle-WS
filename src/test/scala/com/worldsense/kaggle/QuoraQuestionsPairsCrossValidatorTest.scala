@@ -27,7 +27,6 @@ class QuoraQuestionsPairsCrossValidatorTest extends FlatSpec with DataFrameSuite
     val cv = new QuoraQuestionsPairsCrossValidator()
       .setVocabularySize(List(1, 100))
       .setMinDF(List(2))
-      .setRegularization(List(0.2))
       .setNumTopics(List(10))
     val ds = spark.createDataset(features)
     val p = cv.fit(ds).transform(ds)

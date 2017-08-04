@@ -32,12 +32,19 @@ object Main extends App {
     run(res.getString("trainingDataFile"), res.getString("testDataFile"), res.getString("submissionFile"))
   }
   def run(trainingDataFile: String, testDataFile: String, submissionFile: String): Unit = {
-    val estimator = new QuoraQuestionsPairsCrossValidator
-    logger.info(s"Cross validator params:\n${estimator.explainParams()}")
-    val numVariations = estimator.extractParamMap().toSeq.map(_.value.asInstanceOf[List[_]].length).product
-    logger.info(s"Cross validator for kaggle quora questions pairs will train $numVariations * ${estimator.numFolds} models")
+    val crossValidator = new QuoraQuestionsPairsCrossValidator
+    logger.info(s"Cross validator params:\n${crossValidator.explainParams()}")
+    val numVariations = crossValidator.extractParamMap().toSeq.map(_.value.asInstanceOf[List[_]].length).product
+    logger.info(s"Cross validator for kaggle quora questions pairs will train $numVariations * ${crossValidator.numFolds} models")
 
+    // Train with cross validation to get the best params.
     val trainData = featuresLoader.loadTrainFile(spark, trainingDataFile)
+    trainData.cache()   // we will use this repeatedly
+    val cvModel = crossValidator.fit(trainData)
+    val bestParams = cvModel.getEstimatorParamMaps.zip(cvModel.avgMetrics).maxBy(_._2)._1
+
+    // Train on all data.
+    val estimator = new QuoraQuestionsPairsPipeline().copy(bestParams)
     val model = estimator.fit(trainData)
 
     val testData = featuresLoader.loadTestFile(spark, testDataFile)
