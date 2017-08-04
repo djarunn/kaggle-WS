@@ -48,8 +48,11 @@ class FeaturesLoader(override val uid: String) extends Transformer with DefaultP
       .withColumn("qid1", hashUDF(col("question1")))
       .withColumn("qid2", hashUDF(col("question2")))
    val orderedTestDF =  typedTestDF.select("id", "qid1", "qid2", "question1", "question2", "isDuplicate")
-   orderedTestDF.as[Features]
+   // A handful of lines is missing ids, and kaggle is fine with dropping them altogether.
+   val testFeatures = orderedTestDF.as[Features].filter(r => Option(r.id).nonEmpty)
+   testFeatures
   }
+  val logger = org.log4s.getLogger
 }
 
 object FeaturesLoader {

@@ -41,7 +41,9 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
   setDefault(logisticRegressionMaxIter, List(100))
 
   override def transformSchema(schema: StructType): StructType = assembleCrossValidator().transformSchema(schema)
-  override def fit(dataset: Dataset[_]): CrossValidatorModel = assembleCrossValidator().fit(dataset)
+  override def fit(dataset: Dataset[_]): CrossValidatorModel = {
+    assembleCrossValidator().fit(dataset)
+  }
   def copy(extra: ParamMap): QuoraQuestionsPairsCrossValidator = defaultCopy(extra)
 
   private def assembleCrossValidator(): CrossValidator = {
