@@ -13,20 +13,20 @@ import org.apache.spark.sql.types.StructType
 
 class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estimator[CrossValidatorModel] {
   def this() = this(Identifiable.randomUID("quoraquestionspairscrossvalidator"))
-  val numFolds = 5
+  val numFolds = 3
   private val logger = org.log4s.getLogger
 
   final val vocabularySize: Param[List[Int]] = new Param[List[Int]](this, "vocabularySize", "comma separate input column names")
   def setVocabularySize(value: List[Int]): this.type = set(vocabularySize, value)
-  setDefault(vocabularySize, List(1000,1000000))
+  setDefault(vocabularySize, List(10000,1000000))
 
   final val regularization: Param[List[Double]] = new Param[List[Double]](this, "regularization", "comma separate input column names")
   def setRegularization(value: List[Double]): this.type = set(regularization, value)
-  setDefault(regularization, List(0.01,0.1,1.0))
+  setDefault(regularization, List(0.01,0.1))
 
   final val numTopics: Param[List[Int]] = new Param[List[Int]](this, "numTopics", "comma separate input column names")
   def setNumTopics(value: List[Int]): this.type = set(numTopics, value)
-  setDefault(numTopics, List(10,20,50))
+  setDefault(numTopics, List(20,50))
 
   final val minDF: Param[List[Double]] = new Param[List[Double]](this, "minDF", "comma separate input column names")
   def setMinDF(value: List[Double]): this.type = set(minDF, value)
@@ -34,11 +34,11 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
 
   final val ldaMaxIter: Param[List[Int]] = new Param[List[Int]](this, "ldaMaxIter", "comma separate input column names")
   def setLdaMaxIter(value: List[Int]): this.type = set(ldaMaxIter, value)
-  setDefault(ldaMaxIter, List(3))
+  setDefault(ldaMaxIter, List(20, 100))
 
   final val logisticRegressionMaxIter: Param[List[Int]] = new Param[List[Int]](this, "logisticRegressionMaxIter", "comma separate input column names")
   def setLogisticRegressionMaxIter(value: List[Int]): this.type = set(logisticRegressionMaxIter, value)
-  setDefault(logisticRegressionMaxIter, List(3))
+  setDefault(logisticRegressionMaxIter, List(100))
 
   override def transformSchema(schema: StructType): StructType = assembleCrossValidator().transformSchema(schema)
   override def fit(dataset: Dataset[_]): CrossValidatorModel = assembleCrossValidator().fit(dataset)
