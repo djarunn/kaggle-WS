@@ -5,12 +5,12 @@ import org.apache.spark.ml.Estimator
 import org.apache.spark.sql.functions.col
 import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.clustering.LDA
-import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
+import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator}
 import org.apache.spark.ml.feature.{CountVectorizer, StopWordsRemover}
 import org.apache.spark.ml.linalg.{Vector, VectorUDT}
 import org.apache.spark.ml.param.{Param, ParamMap, ParamValidators}
 import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
-import org.apache.spark.ml.util.Identifiable
+import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.types.{DoubleType, StructType}
@@ -19,7 +19,7 @@ import scala.io.Source
 
 class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estimator[CrossValidatorModel] {
   def this() = this(Identifiable.randomUID("quoraquestionspairscrossvalidator"))
-  val numFolds = 2
+  val numFolds = 3
   private val logger = org.log4s.getLogger
 
   final val vocabularySize: Param[List[Int]] = new Param[List[Int]](this, "vocabularySize", "size of vocabulary")
@@ -73,10 +73,8 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
       .addGrid(logisticRegression.maxIter, $(logisticRegressionMaxIter))
       .build()
 
-    val evaluator = new BinaryClassificationEvaluator()
-      .setLabelCol("isDuplicateLabel")
-        .setRawPredictionCol("raw")
-        .setMetricName("areaUnderROC")
+    val evaluator = new LogLossBinaryClassificationEvaluator()
+      .setLabelCol("isDuplicateLabel").setProbabilityCol("p")
 
     // Cross-validation setup
     new CrossValidator()
@@ -88,21 +86,35 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
 }
 
 object QuoraQuestionsPairsCrossValidator {
-  def logLoss(scoreAndLabels: RDD[(Double, Double)]): Double = {
-    val v = scoreAndLabels.collect()
+  private def logLoss(scoreAndLabels: RDD[(Double, Double)]): Double = {
+    val rows = scoreAndLabels.collect
     // https://www.kaggle.com/wiki/LogLoss
-    v.map(pl => pl._2 * math.log(pl._1)).sum / v.length * -1
+    val v = rows.map(pl => pl._2 * math.log(pl._1)).sum / rows.length * -1
+    logger.info(s"Computed log loss of $v for ${rows.length} rows.")
+    v
   }
+  private val logger = org.log4s.getLogger
 
-  class LogLossBinaryClassificationEvaluator(uid: String) extends BinaryClassificationEvaluator(uid) {
+  class LogLossBinaryClassificationEvaluator(override val uid: String) extends Evaluator with DefaultParamsWritable {
     def this() = this(Identifiable.randomUID("logLossEval"))
+    override def copy(extra: ParamMap): LogLossBinaryClassificationEvaluator = defaultCopy(extra)
+    final val probabilityCol: Param[String] = new Param[String](this, "probabilityCol", "Column name for predicted class conditional probabilities.")
+    setDefault(probabilityCol, "probability")
+    final def getProbabilityCol: String = $(probabilityCol)
+    final def setProbabilityCol(value: String): this.type = set(probabilityCol, value)
+    final val labelCol: Param[String] = new Param[String](this, "labelCol", "label column name")
+    setDefault(labelCol, "label")
+    final def getLabelCol: String = $(labelCol)
+    final def setLabelCol(value: String): this.type = set(labelCol, value)
+
     override def evaluate(dataset: Dataset[_]): Double = {
       val scoreAndLabels: RDD[(Double, Double)] =
-        dataset.select(col($(rawPredictionCol)), col($(labelCol)).cast(DoubleType)).rdd.map {
-          case Row(rawPrediction: Vector, label: Double) => (rawPrediction(1), label)
-          case Row(rawPrediction: Double, label: Double) => (rawPrediction, label)
+        dataset.select(col($(probabilityCol)), col($(labelCol)).cast(DoubleType)).rdd.map {
+          case Row(probability: Vector, label: Double) => (probability(1), label)
+          case Row(probability: Double, label: Double) => (probability, label)
         }
       logLoss(scoreAndLabels)
     }
   }
+  object LogLossBinaryClassificationEvaluator extends DefaultParamsReadable[LogLossBinaryClassificationEvaluator]
 }
