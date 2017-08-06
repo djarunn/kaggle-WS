@@ -7,7 +7,7 @@ import org.apache.spark.ml.linalg.DenseVector
 import org.apache.spark.ml.param.{Param, ParamMap}
 import org.apache.spark.ml.util.Identifiable
 import org.apache.spark.ml.{Estimator, Pipeline, PipelineModel, PipelineStage}
-import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
+import org.apache.spark.mllib.evaluation.{BinaryClassificationMetrics, MultilabelMetrics}
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
 
@@ -53,13 +53,18 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     logger.info(s"Preparing to fit quora question pipeline with params:\n${explainParams()}")
     val model = assemblePipeline().fit(dataset)
     val predictions = model.transform(dataset).select("p", "isDuplicateLabel").as[(DenseVector, Int)]
-    val predictionsAndLabels = predictions map { case (p, label) =>
+    val scoresAndLabels = predictions map { case (p, label) =>
       (p.values.last, label.toDouble)
     }
-    val metrics = new BinaryClassificationMetrics(predictionsAndLabels.rdd)
+    val metrics = new BinaryClassificationMetrics(scoresAndLabels.rdd)
     val areaUnderPR = metrics.areaUnderPR()
     val areaUnderROC = metrics.areaUnderROC()
-    logger.info(s"Trained a model with area under pr $areaUnderPR and area under roc curve $areaUnderROC")
+    logger.info(s"Trained a model with area under pr $areaUnderPR and area under roc curve $areaUnderROC.")
+    val predictionsAndLabels = predictions map { case (p, label) =>
+      (p.values.map(_.round.toDouble), if (label > 0) Array(0.0, 1.0) else Array(1.0, 0.0))
+    }
+    val moreMetrics = new MultilabelMetrics(predictionsAndLabels.rdd)
+    logger.info(s"Trained model has extra metrics accuracy ${moreMetrics.accuracy} and ${moreMetrics.f1Measure}.")
     model
   }
 

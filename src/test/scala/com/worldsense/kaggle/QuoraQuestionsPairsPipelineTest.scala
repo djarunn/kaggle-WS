@@ -26,7 +26,6 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
     val p = estimator.fit(ds).transform(ds)
     assert(p.count() === features.length)
     val dupCount = p.select("prediction").as[Double].collect().count(_ > 0)
-    p.select("isDuplicate", "mergedlda").show(20, 200)
     assert(dupCount >= 1 && dupCount <= 99)  // learned something
   }
 }
