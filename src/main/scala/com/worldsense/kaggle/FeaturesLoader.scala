@@ -15,7 +15,7 @@ class FeaturesLoader(override val uid: String) extends Transformer with DefaultP
   import FeaturesLoader.{Features, KaggleFiles}
   def this() = this(Identifiable.randomUID("features"))
   def copy(extra: ParamMap): FeaturesLoader = defaultCopy(extra)
-  private val csvOptions = Map("header" -> "true", "escape" -> "\"")
+  private val csvOptions = Map("header" -> "true", "escape" -> "\"", "multiLine" -> "true")
 
   override def transformSchema(schema: StructType): StructType = Encoders.product[Features].schema
 
@@ -29,14 +29,18 @@ class FeaturesLoader(override val uid: String) extends Transformer with DefaultP
   }
   def loadTrainFile(spark: SparkSession, trainFile: String): Dataset[Features] = {
     import spark.implicits.newProductEncoder
-    val trainDF = spark.read.options(csvOptions).csv(trainFile)
-    trainDF.selectExpr(
+    val df = loadTrainDataFrame(spark, trainFile)
+    df.withColumnRenamed("is_duplicate", "isDuplicate").as[Features]
+  }
+  def loadTrainDataFrame(spark: SparkSession, trainFile: String): DataFrame = {
+    val df = spark.read.options(csvOptions).csv(trainFile)
+    df.selectExpr(
       "cast(id as int) id",
       "cast(qid1 as int) qid1",
       "cast(qid2 as int) qid2",
       "question1", "question2",
-      "cast(is_duplicate as boolean) isDuplicate"
-    ).as[Features]
+      "cast(is_duplicate as boolean) is_duplicate"
+    )
   }
   def loadTestFile(spark: SparkSession, testFile: String): Dataset[Features] = {
    import spark.implicits.newProductEncoder
@@ -48,9 +52,7 @@ class FeaturesLoader(override val uid: String) extends Transformer with DefaultP
       .withColumn("qid1", hashUDF(col("question1")))
       .withColumn("qid2", hashUDF(col("question2")))
    val orderedTestDF =  typedTestDF.select("id", "qid1", "qid2", "question1", "question2", "isDuplicate")
-   // A handful of lines is missing ids, and kaggle is fine with dropping them altogether.
-   val testFeatures = orderedTestDF.as[Features].filter(r => Option(r.id).nonEmpty)
-   testFeatures
+   orderedTestDF.as[Features]
   }
   val logger = org.log4s.getLogger
 }

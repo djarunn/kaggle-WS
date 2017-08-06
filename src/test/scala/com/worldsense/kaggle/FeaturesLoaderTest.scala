@@ -16,5 +16,6 @@ class FeaturesLoaderTest extends FlatSpec with DataFrameSuiteBase {
     val testFile = getClass.getResource("/quora/test100.csv").getFile
     val features = new FeaturesLoader().loadTestFile(spark, testFile).collect()
     assert(features.map(_.id).distinct.length === features.length)
+    assert(features.exists(r => Option(r.id).isEmpty))  // preserve brokenness of broken rows
   }
 }

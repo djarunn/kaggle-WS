@@ -11,7 +11,7 @@ import scala.util.{Failure, Try}
 object Main extends App {
   private val logger = org.log4s.getLogger
   private val sparkConf = new SparkConf()
-    .set("spark.driver.memory", "4g")
+    .set("spark.driver.memory", "6g")
     .setMaster("local[*]")
   private val spark = SparkSession.builder.config(sparkConf).appName("kaggle").getOrCreate()
   private val featuresLoader = new FeaturesLoader()
