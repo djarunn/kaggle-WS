@@ -11,7 +11,7 @@ class CleanFeaturesTransformerTest extends FlatSpec with DataFrameSuiteBase {
       isDuplicate = false),
     Features(id = null, qid1 = 1, qid2 = null,
       question1 = "joao", question2 = "joão",
-      isDuplicate = false),
+      isDuplicate = false)
   )
   "CleanFeaturesTransformerTest" should "get rid of nulls and diacriticals" in {
     import spark.implicits._

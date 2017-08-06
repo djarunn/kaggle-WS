@@ -1,15 +1,19 @@
 package com.worldsense.kaggle
 
+import com.worldsense.kaggle.QuoraQuestionsPairsCrossValidator.LogLossBinaryClassificationEvaluator
 import org.apache.spark.ml.Estimator
+import org.apache.spark.sql.functions.col
 import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.clustering.LDA
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.feature.{CountVectorizer, StopWordsRemover}
-import org.apache.spark.ml.param.{Param, ParamMap}
+import org.apache.spark.ml.linalg.{Vector, VectorUDT}
+import org.apache.spark.ml.param.{Param, ParamMap, ParamValidators}
 import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
 import org.apache.spark.ml.util.Identifiable
-import org.apache.spark.sql.Dataset
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, Dataset, Row}
+import org.apache.spark.sql.types.{DoubleType, StructType}
 
 import scala.io.Source
 
@@ -80,5 +84,25 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
         .setEvaluator(evaluator)
         .setEstimatorParamMaps(paramGrid)
         .setNumFolds(numFolds)
+  }
+}
+
+object QuoraQuestionsPairsCrossValidator {
+  def logLoss(scoreAndLabels: RDD[(Double, Double)]): Double = {
+    val v = scoreAndLabels.collect()
+    // https://www.kaggle.com/wiki/LogLoss
+    v.map(pl => pl._2 * math.log(pl._1)).sum / v.length * -1
+  }
+
+  class LogLossBinaryClassificationEvaluator(uid: String) extends BinaryClassificationEvaluator(uid) {
+    def this() = this(Identifiable.randomUID("logLossEval"))
+    override def evaluate(dataset: Dataset[_]): Double = {
+      val scoreAndLabels: RDD[(Double, Double)] =
+        dataset.select(col($(rawPredictionCol)), col($(labelCol)).cast(DoubleType)).rdd.map {
+          case Row(rawPrediction: Vector, label: Double) => (rawPrediction(1), label)
+          case Row(rawPrediction: Double, label: Double) => (rawPrediction, label)
+        }
+      logLoss(scoreAndLabels)
+    }
   }
 }
