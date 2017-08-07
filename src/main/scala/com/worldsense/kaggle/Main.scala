@@ -43,9 +43,10 @@ object Main extends App {
     val cvModel = crossValidator.fit(trainData)
     val bestParams = cvModel.getEstimatorParamMaps.zip(cvModel.avgMetrics).maxBy(_._2)._1
 
-    // Train on all data.
+    // Train on all data."
     val estimator = new QuoraQuestionsPairsPipeline().copy(bestParams)
     val model = estimator.fit(trainData)
+    logger.info(s"Trained final model with params:\n${model.explainParams()}")
 
     val testData = featuresLoader.loadTestFile(spark, testDataFile)
     val submissionWriter = new SubmissionWriter().setModel(model)

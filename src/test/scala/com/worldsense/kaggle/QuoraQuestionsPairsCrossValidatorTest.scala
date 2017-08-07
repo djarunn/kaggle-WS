@@ -25,9 +25,10 @@ class QuoraQuestionsPairsCrossValidatorTest extends FlatSpec with DataFrameSuite
     val cvDir: Path = Paths.get(tmpdir.toString, "cv")
     // Create cross validator with toy hyperparameters favoring speed of execution.
     val cv = new QuoraQuestionsPairsCrossValidator()
-      .setVocabularySize(List(1, 100))
-      .setMinDF(List(2))
+      .setMinDocFreq(List(2))
       .setNumTopics(List(10))
+      .setLdaMaxIter(List(10))
+      .setLogisticRegressionMaxIter(List(10))
     val ds = spark.createDataset(features)
     val p = cv.fit(ds).transform(ds)
     assert(p.collect.nonEmpty)

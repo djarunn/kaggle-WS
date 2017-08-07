@@ -12,7 +12,7 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
   val features = (1 until 100).map { i =>
     val isDuplicate = rng.nextBoolean()
     val question1 = if (rng.nextBoolean()) "dunno" else "either"
-    val question2 = if (isDuplicate) "i am a dup." else "i am not: doubled"
+    val question2 = if (rng.nextBoolean()) "noise" else if (isDuplicate) "i am a dup." else "i am not: doubled"
     Features(id = i, qid1 = rng.nextInt(100), qid2 = rng.nextInt(100),
       question1 = question1, question2 = question2,
       isDuplicate = isDuplicate)

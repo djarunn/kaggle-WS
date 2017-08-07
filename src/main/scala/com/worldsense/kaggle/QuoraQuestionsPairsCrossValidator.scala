@@ -2,49 +2,44 @@ package com.worldsense.kaggle
 
 import com.worldsense.kaggle.QuoraQuestionsPairsCrossValidator.LogLossBinaryClassificationEvaluator
 import org.apache.spark.ml.Estimator
-import org.apache.spark.sql.functions.col
 import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.clustering.LDA
-import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator}
-import org.apache.spark.ml.feature.{CountVectorizer, StopWordsRemover}
-import org.apache.spark.ml.linalg.{Vector, VectorUDT}
-import org.apache.spark.ml.param.{Param, ParamMap, ParamValidators}
+import org.apache.spark.ml.evaluation.Evaluator
+import org.apache.spark.ml.feature.{CountVectorizer, IDF, StopWordsRemover}
+import org.apache.spark.ml.linalg.Vector
+import org.apache.spark.ml.param.{Param, ParamMap}
 import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Dataset, Row}
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.{DoubleType, StructType}
+import org.apache.spark.sql.{Dataset, Row}
 
 import scala.io.Source
 
 class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estimator[CrossValidatorModel] {
   def this() = this(Identifiable.randomUID("quoraquestionspairscrossvalidator"))
   val numFolds = 3
-  private val logger = org.log4s.getLogger
-
-  final val vocabularySize: Param[List[Int]] = new Param[List[Int]](this, "vocabularySize", "size of vocabulary")
-  def setVocabularySize(value: List[Int]): this.type = set(vocabularySize, value)
-  setDefault(vocabularySize, List(10000))
 
   final val stopwords: Param[List[String]] = new Param[List[String]](this, "stopwords", "path to files with comma separate normalized stopwords")
   def setStopwords(value: List[String]): this.type = set(stopwords, value)
   setDefault(stopwords, List("src/main/resources/quora/stopwords.txt"))
 
+  final val minDocFreq: Param[List[Int]] = new Param[List[Int]](this, "minDF", "comma separate input column names")
+  def setMinDocFreq(value: List[Int]): this.type = set(minDocFreq, value)
+  setDefault(minDocFreq, List(2, 5))
+
   final val numTopics: Param[List[Int]] = new Param[List[Int]](this, "numTopics", "comma separate input column names")
   def setNumTopics(value: List[Int]): this.type = set(numTopics, value)
-  setDefault(numTopics, List(20))
-
-  final val minDF: Param[List[Double]] = new Param[List[Double]](this, "minDF", "comma separate input column names")
-  def setMinDF(value: List[Double]): this.type = set(minDF, value)
-  setDefault(minDF, List(2.0))
+  setDefault(numTopics, List(20, 50, 100))
 
   final val ldaMaxIter: Param[List[Int]] = new Param[List[Int]](this, "ldaMaxIter", "comma separate input column names")
   def setLdaMaxIter(value: List[Int]): this.type = set(ldaMaxIter, value)
-  setDefault(ldaMaxIter, List(100))
+  setDefault(ldaMaxIter, List(100, 1000))
 
   final val logisticRegressionMaxIter: Param[List[Int]] = new Param[List[Int]](this, "logisticRegressionMaxIter", "comma separate input column names")
   def setLogisticRegressionMaxIter(value: List[Int]): this.type = set(logisticRegressionMaxIter, value)
-  setDefault(logisticRegressionMaxIter, List(100))
+  setDefault(logisticRegressionMaxIter, List(100, 1000))
 
   override def transformSchema(schema: StructType): StructType = assembleCrossValidator().transformSchema(schema)
   override def fit(dataset: Dataset[_]): CrossValidatorModel = {
@@ -54,21 +49,21 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
 
   private def assembleCrossValidator(): CrossValidator = {
     val stopwordsRemover = new StopWordsRemover()
+    val idf = new IDF()
     val countVectorizer = new CountVectorizer()
     val logisticRegression = new LogisticRegression()
     val lda = new LDA()
     val estimator = new QuoraQuestionsPairsPipeline()
       .setStopwordsRemover(stopwordsRemover)
-      .setCountVectorizer(countVectorizer)
-      .setLogisticRegression(logisticRegression)
+      .setIDF(idf)
       .setLDA(lda)
+      .setLogisticRegression(logisticRegression)
     // Grid search on hyperparameter space
     val stopwordsLists = $(stopwords).map(Source.fromFile).map(_.getLines().mkString(",").split(","))
     val paramGrid = new ParamGridBuilder()
       .addGrid(stopwordsRemover.stopWords, stopwordsLists)
-      .addGrid(countVectorizer.vocabSize, $(vocabularySize))
+      .addGrid(idf.minDocFreq, $(minDocFreq))
       .addGrid(lda.k, $(numTopics))
-      .addGrid(countVectorizer.minDF, $(minDF))
       .addGrid(lda.maxIter, $(ldaMaxIter))
       .addGrid(logisticRegression.maxIter, $(logisticRegressionMaxIter))
       .build()

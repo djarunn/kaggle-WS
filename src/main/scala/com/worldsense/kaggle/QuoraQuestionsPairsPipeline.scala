@@ -1,12 +1,12 @@
 package com.worldsense.kaggle
 
+import org.apache.spark.ml.{Estimator, Pipeline, PipelineModel, PipelineStage}
 import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.clustering.LDA
 import org.apache.spark.ml.feature._
 import org.apache.spark.ml.linalg.DenseVector
 import org.apache.spark.ml.param.{Param, ParamMap}
 import org.apache.spark.ml.util.Identifiable
-import org.apache.spark.ml.{Estimator, Pipeline, PipelineModel, PipelineStage}
 import org.apache.spark.mllib.evaluation.{BinaryClassificationMetrics, MultilabelMetrics}
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
@@ -22,9 +22,9 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   val stopwordsRemover: Param[StopWordsRemover] =
     new Param(this, "stopwords", "Drops stopwords from input text.")
   setDefault(stopwordsRemover, new StopWordsRemover())
-  val countVectorizer: Param[CountVectorizer] =
-    new Param(this, "countVectorizer", "Convert input tokens into weighted vectors.")
-  setDefault(countVectorizer, new CountVectorizer())
+  val idf: Param[IDF] =
+    new Param(this, "idf", "Calculate weights for vector representation of tokens.")
+  setDefault(idf, new IDF())
   val lda: Param[LDA] =
     new Param(this, "lda", "Convert each question into a weighted topic vector.")
   setDefault(lda, new LDA())
@@ -49,28 +49,34 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     new Pipeline().setStages(stages)
   }
   override def fit(dataset: Dataset[_]): PipelineModel = {
-    import dataset.sparkSession.implicits.newProductEncoder
     logger.info(s"Preparing to fit quora question pipeline with params:\n${explainParams()}")
     val model = assemblePipeline().fit(dataset)
-    val predictions = model.transform(dataset).select("p", "isDuplicateLabel").as[(DenseVector, Int)]
-    val scoresAndLabels = predictions map { case (p, label) =>
-      (p.values.last, label.toDouble)
-    }
-    val metrics = new BinaryClassificationMetrics(scoresAndLabels.rdd)
-    val areaUnderPR = metrics.areaUnderPR()
-    val areaUnderROC = metrics.areaUnderROC()
-    logger.info(s"Trained a model with area under pr $areaUnderPR and area under roc curve $areaUnderROC.")
-    val predictionsAndLabels = predictions map { case (p, label) =>
-      (p.values.map(_.round.toDouble), if (label > 0) Array(0.0, 1.0) else Array(1.0, 0.0))
-    }
-    val moreMetrics = new MultilabelMetrics(predictionsAndLabels.rdd)
-    logger.info(s"Trained model has extra metrics accuracy ${moreMetrics.accuracy} and ${moreMetrics.f1Measure}.")
+    logMetrics(model, dataset)
     model
+  }
+  private def logMetrics(model: PipelineModel, dataset: Dataset[_]): Unit = {
+    import dataset.sparkSession.implicits.newProductEncoder
+    val labeledDataset = model.transform(dataset).select("p", "isDuplicateLabel").as[(DenseVector, Int)]
+    labeledDataset.cache()  // will be used multiple times
+    val scoresAndLabels = labeledDataset map { case (p, label) =>
+      (p.values.last, label.toDouble)  // the last of values is the probability of the positive class
+    }
+    val binaryMetrics = new BinaryClassificationMetrics(scoresAndLabels.rdd)
+    val areaUnderPR = binaryMetrics.areaUnderPR()
+    val areaUnderROC = binaryMetrics.areaUnderROC()
+    val predictionAndLabels = labeledDataset map { case (p, label) =>
+      (Array(p.values.last.round.toDouble), if (label > 0) Array(1.0) else Array(0.0))
+    }
+    val multiLabelMetrics = new MultilabelMetrics(predictionAndLabels.rdd)
+    logger.info(s"Trained a model with area under pr $areaUnderPR and area under roc curve $areaUnderROC, " +
+                s"accuracy ${multiLabelMetrics.accuracy} and f1 ${multiLabelMetrics.f1Measure}.\n" +
+                s"Params are: ${explainParams()}")
+    labeledDataset.unpersist()
   }
 
   override def explainParams(): String = {
     val stages = Seq(
-      $(cleanFeaturesTransformer), $(tokenizer), $(stopwordsRemover), $(countVectorizer), $(lda), $(logisticRegression)
+      $(cleanFeaturesTransformer), $(tokenizer), $(stopwordsRemover), $(idf), $(lda), $(logisticRegression)
     )
     stages.map(_.explainParams()).mkString("\n")
   }
@@ -92,11 +98,15 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   }
 
   private def vectorizePipeline(): Array[PipelineStage] = {
-    val mcCountVectorizer = new MultiColumnPipeline()
+    val mcTf = new MultiColumnPipeline()
       .setInputCols(questions("tokens"))
-      .setOutputCols(questions("vectors"))
-      .setStage($(countVectorizer))
-    Array(mcCountVectorizer)
+      .setOutputCols(questions("tf"))
+      .setStage(new HashingTF())
+    val mcIdf = new MultiColumnPipeline()
+      .setInputCols(questions("tf"))
+      .setOutputCols(questions("tfidf"))
+      .setStage(new IDF())
+    Array(mcTf, mcIdf)
   }
 
  private def ldaPipeline(): Array[PipelineStage] = {
@@ -108,7 +118,7 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
      .setOptimizer(optimizer)
      .setFeaturesCol("tmpinput").setTopicDistributionCol("tmpoutput")
    val mcLda = new MultiColumnPipeline()
-     .setInputCols(questions("vectors"))
+     .setInputCols(questions("tfidf"))
      .setOutputCols(questions("lda"))
      .setStage(ldaEstimator, ldaEstimator.getFeaturesCol, ldaEstimator.getTopicDistributionCol)
    Array(mcLda)
@@ -139,7 +149,7 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
 
   def setStopwordsRemover(value: StopWordsRemover): this.type = set(stopwordsRemover, value)
 
-  def setCountVectorizer(value: CountVectorizer): this.type = set(countVectorizer, value)
+  def setIDF(value: IDF): this.type = set(idf, value)
 
   def setLDA(value: LDA): this.type = set(lda, value)
 
