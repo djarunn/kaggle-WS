@@ -105,7 +105,7 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     val mcIdf = new MultiColumnPipeline()
       .setInputCols(questions("tf"))
       .setOutputCols(questions("tfidf"))
-      .setStage(new IDF())
+      .setStage($(idf))
     Array(mcTf, mcIdf)
   }
 
