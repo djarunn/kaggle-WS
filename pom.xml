@@ -20,6 +20,12 @@
     <scalatest.version>3.0.1</scalatest.version>
   </properties>
   <dependencies>
+	  <dependency>
+		      <groupId>com.intel.analytics.bigdl</groupId>
+		          <artifactId>bigdl-core-parent</artifactId>
+			      <version>0.2.0</version>
+			          <type>pom</type>
+			  </dependency>
     <dependency>
       <groupId>net.sourceforge.argparse4j</groupId>
       <artifactId>argparse4j</artifactId>
