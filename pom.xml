@@ -21,27 +21,27 @@
     <bigdl.version>0.2.0</bigdl.version>
   </properties>
   <dependencies>
-	  <dependency>
-		      <groupId>com.intel.analytics.bigdl</groupId>
-		          <artifactId>bigdl</artifactId>
-			      <version>${bigdl.version}</version>
-		      </dependency>
-			  <dependency>
-				      <groupId>com.intel.analytics.bigdl</groupId>
-				          <artifactId>bigdl-SPARK_2.0</artifactId>
-					      <version>${bigdl.version}</version>
-				      </dependency>
-				      <dependency>
-					          <groupId>com.intel.analytics.bigdl.native</groupId>
-						      <artifactId>mkl-java-mac</artifactId>
-						          <version>${bigdl.version}</version>
-							      <exclusions>
-								              <exclusion>
-										                  <groupId>com.intel.analytics.bigdl.native</groupId>
-												              <artifactId>bigdl-native</artifactId>
-													              </exclusion>
-														          </exclusions>
-														  </dependency>
+    <dependency>
+      <groupId>com.intel.analytics.bigdl</groupId>
+      <artifactId>bigdl</artifactId>
+      <version>${bigdl.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.intel.analytics.bigdl</groupId>
+      <artifactId>bigdl-SPARK_2.0</artifactId>
+      <version>${bigdl.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.intel.analytics.bigdl.native</groupId>
+      <artifactId>mkl-java-mac</artifactId>
+      <version>${bigdl.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.intel.analytics.bigdl.native</groupId>
+          <artifactId>bigdl-native</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
     <dependency>
       <groupId>net.sourceforge.argparse4j</groupId>
       <artifactId>argparse4j</artifactId>

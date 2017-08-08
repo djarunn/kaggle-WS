@@ -2,26 +2,27 @@ package com.worldsense.kaggle
 
 import org.apache.spark.ml.{Estimator, Pipeline, PipelineModel, PipelineStage}
 import org.apache.spark.ml.classification.LogisticRegression
-import org.apache.spark.ml.clustering.LDA
+import org.apache.spark.ml.clustering.{LDA, LDAModel}
 import org.apache.spark.ml.feature._
 import org.apache.spark.ml.linalg.DenseVector
 import org.apache.spark.ml.param.{Param, ParamMap}
 import org.apache.spark.ml.util.Identifiable
 import org.apache.spark.mllib.evaluation.{BinaryClassificationMetrics, MultilabelMetrics}
-import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.functions.{udf, col}
 
 
 class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[PipelineModel] {
-  val cleanFeaturesTransformer: Param[CleanFeaturesTransformer] =
-    new Param(this, "cleaner", "Cleans the input text.")
-  setDefault(cleanFeaturesTransformer, new CleanFeaturesTransformer())
-  val tokenizer: Param[Tokenizer] =
-    new Param(this, "tokenizer", "Breaks input text into tokens.")
-  setDefault(tokenizer, new Tokenizer)
+  val tokenizer: Param[RegexTokenizer] =
+    new Param(this, "tokenizer", "Breaks the sentences into individual words.")
+  setDefault(tokenizer, new RegexTokenizer().setPattern("""[\p{Punct} ]"""))
   val stopwordsRemover: Param[StopWordsRemover] =
     new Param(this, "stopwords", "Drops stopwords from input text.")
   setDefault(stopwordsRemover, new StopWordsRemover())
+  val countVectorizer: Param[CountVectorizer] =
+    new Param(this, "countVectorizer", "Converts words into numerical ids.")
+  setDefault(countVectorizer, new CountVectorizer)
   val idf: Param[IDF] =
     new Param(this, "idf", "Calculate weights for vector representation of tokens.")
   setDefault(idf, new IDF())
@@ -37,7 +38,6 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
 
   override def transformSchema(schema: StructType): StructType = assemblePipeline().transformSchema(schema)
 
-  private val logger = org.log4s.getLogger
   private def assemblePipeline(): Pipeline = {
     val stages = Array(
       cleanerPipeline(),
@@ -49,11 +49,13 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     new Pipeline().setStages(stages)
   }
   override def fit(dataset: Dataset[_]): PipelineModel = {
-    logger.info(s"Preparing to fit quora question pipeline with params:\n${explainParams()}")
+    logger.info(s"Preparing to fit quora question pipeline.")
     val model = assemblePipeline().fit(dataset)
     logMetrics(model, dataset)
+    logTopics(dataset.sparkSession, model)
     model
   }
+  private val logger = org.log4s.getLogger
   private def logMetrics(model: PipelineModel, dataset: Dataset[_]): Unit = {
     import dataset.sparkSession.implicits.newProductEncoder
     val labeledDataset = model.transform(dataset).select("p", "isDuplicateLabel").as[(DenseVector, Int)]
@@ -70,19 +72,33 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     val multiLabelMetrics = new MultilabelMetrics(predictionAndLabels.rdd)
     logger.info(s"Trained a model with area under pr $areaUnderPR and area under roc curve $areaUnderROC, " +
                 s"accuracy ${multiLabelMetrics.accuracy} and f1 ${multiLabelMetrics.f1Measure}.\n" +
-                s"Params are: ${explainParams()}")
+                s"Params are: ${params.toString}")
     labeledDataset.unpersist()
   }
+  private def logTopics(spark: SparkSession, model: PipelineModel): Unit = {
+    val vocabulary = getNestedMcModel[CountVectorizerModel](model, 3).vocabulary
+    val topicsDF = getNestedMcModel[LDAModel](model, 5).describeTopics()
+    val bc = spark.sparkContext.broadcast(vocabulary)
+    val getTerm = udf((indices: Seq[Int]) => indices.map(i => bc.value(i)))
+    val topics = topicsDF.withColumn("terms", getTerm(col("termIndices"))).collect
+    val explained = topics.map { row =>
+      val topic = row.getAs[Int]("topic")
+      val terms = row.getAs[Seq[String]]("terms")
+      val termWeights = row.getAs[Seq[Double]]("termWeights")
+      val tw = terms.zip(termWeights).map(tw => f"${tw._1} ${tw._2}%.3f").mkString(" ")
+      s"$topic: $tw"
+    }
+    bc.unpersist()
+    val msg = explained.mkString("\n")
+    logger.info(s"LDA model topics are:\n$msg")
+  }
 
-  override def explainParams(): String = {
-    val stages = Seq(
-      $(cleanFeaturesTransformer), $(tokenizer), $(stopwordsRemover), $(idf), $(lda), $(logisticRegression)
-    )
-    stages.map(_.explainParams()).mkString("\n")
+  private def getNestedMcModel[T](model: PipelineModel, index: Int): T = {
+    model.stages(index).asInstanceOf[PipelineModel].stages(1).asInstanceOf[PipelineModel].stages(0).asInstanceOf[T]
   }
 
   private def cleanerPipeline(): Array[PipelineStage] = {
-    Array($(cleanFeaturesTransformer))
+    Array(new CleanFeaturesTransformer())
   }
 
   private def tokenizePipeline(): Array[PipelineStage] = {
@@ -98,10 +114,13 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   }
 
   private def vectorizePipeline(): Array[PipelineStage] = {
+    // For the record, count vectorizer params since default vocab size of 2^18 is close enough to our
+    // estimated vocab size of 110k in the training data.
+    // for t in $(cat train.csv  | rev | cut -d, -f2,3 | rev |tr ',"' " " |  tr -cd '[[:alnum:]] ._-' | tr '[:upper:]' '[:lower:]' ); do echo -e $t; done | sort | uniq | wc -l
     val mcTf = new MultiColumnPipeline()
       .setInputCols(questions("tokens"))
       .setOutputCols(questions("tf"))
-      .setStage(new HashingTF())
+      .setStage($(countVectorizer))
     val mcIdf = new MultiColumnPipeline()
       .setInputCols(questions("tf"))
       .setOutputCols(questions("tfidf"))
@@ -142,10 +161,6 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   }
 
   def copy(extra: ParamMap): QuoraQuestionsPairsPipeline = defaultCopy(extra)
-
-  def setCleanFeaturesTransformer(value: CleanFeaturesTransformer): this.type = set(cleanFeaturesTransformer, value)
-
-  def setTokenizer(value: Tokenizer): this.type = set(tokenizer, value)
 
   def setStopwordsRemover(value: StopWordsRemover): this.type = set(stopwordsRemover, value)
 

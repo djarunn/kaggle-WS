@@ -31,15 +31,15 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
 
   final val numTopics: Param[List[Int]] = new Param[List[Int]](this, "numTopics", "comma separate input column names")
   def setNumTopics(value: List[Int]): this.type = set(numTopics, value)
-  setDefault(numTopics, List(20, 50, 100))
+  setDefault(numTopics, List(50, 100))
 
   final val ldaMaxIter: Param[List[Int]] = new Param[List[Int]](this, "ldaMaxIter", "comma separate input column names")
   def setLdaMaxIter(value: List[Int]): this.type = set(ldaMaxIter, value)
-  setDefault(ldaMaxIter, List(100, 1000))
+  setDefault(ldaMaxIter, List(300))
 
   final val logisticRegressionMaxIter: Param[List[Int]] = new Param[List[Int]](this, "logisticRegressionMaxIter", "comma separate input column names")
   def setLogisticRegressionMaxIter(value: List[Int]): this.type = set(logisticRegressionMaxIter, value)
-  setDefault(logisticRegressionMaxIter, List(100, 1000))
+  setDefault(logisticRegressionMaxIter, List(100))
 
   override def transformSchema(schema: StructType): StructType = assembleCrossValidator().transformSchema(schema)
   override def fit(dataset: Dataset[_]): CrossValidatorModel = {
@@ -50,7 +50,6 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
   private def assembleCrossValidator(): CrossValidator = {
     val stopwordsRemover = new StopWordsRemover()
     val idf = new IDF()
-    val countVectorizer = new CountVectorizer()
     val logisticRegression = new LogisticRegression()
     val lda = new LDA()
     val estimator = new QuoraQuestionsPairsPipeline()

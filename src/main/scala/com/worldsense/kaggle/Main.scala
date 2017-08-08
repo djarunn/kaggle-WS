@@ -13,7 +13,6 @@ object Main extends App {
   private val sparkConf = new SparkConf()
     .set("spark.driver.memory", "6g")
     .setMaster("local[*]")
-  private val spark = SparkSession.builder.config(sparkConf).appName("kaggle").getOrCreate()
   private val featuresLoader = new FeaturesLoader()
   private val parser = ArgumentParsers.newArgumentParser("kaggle")
     .description("Train and evaluate a model for kaggle's  quora questions pair challenge.")
@@ -28,10 +27,12 @@ object Main extends App {
     System.exit(1)
     Failure(e)
   } foreach { res =>
+    val spark = SparkSession.builder.config(sparkConf).appName("kaggle").getOrCreate()
     logger.info(s"BLAS backend is ${BLAS.getInstance().getClass.getName}")
-    run(res.getString("trainingDataFile"), res.getString("testDataFile"), res.getString("submissionFile"))
+    run(spark, res.getString("trainingDataFile"), res.getString("testDataFile"), res.getString("submissionFile"))
+    spark.stop
   }
-  def run(trainingDataFile: String, testDataFile: String, submissionFile: String): Unit = {
+  def run(spark: SparkSession, trainingDataFile: String, testDataFile: String, submissionFile: String): Unit = {
     val crossValidator = new QuoraQuestionsPairsCrossValidator
     logger.info(s"Cross validator params:\n${crossValidator.explainParams()}")
     val numVariations = crossValidator.extractParamMap().toSeq.map(_.value.asInstanceOf[List[_]].length).product
@@ -46,10 +47,11 @@ object Main extends App {
     // Train on all data."
     val estimator = new QuoraQuestionsPairsPipeline().copy(bestParams)
     val model = estimator.fit(trainData)
-    logger.info(s"Trained final model with params:\n${model.explainParams()}")
+    logger.info(s"Trained final model with params:\n${bestParams.toString}")
 
     val testData = featuresLoader.loadTestFile(spark, testDataFile)
     val submissionWriter = new SubmissionWriter().setModel(model)
     submissionWriter.writeSubmissionFile(testData, submissionFile)
+    logger.info(s"Submission file parquet written at submissionFile.")
   }
 }

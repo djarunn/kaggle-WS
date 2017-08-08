@@ -30,7 +30,8 @@ class QuoraQuestionsPairsCrossValidatorTest extends FlatSpec with DataFrameSuite
       .setLdaMaxIter(List(10))
       .setLogisticRegressionMaxIter(List(10))
     val ds = spark.createDataset(features)
-    val p = cv.fit(ds).transform(ds)
+    val cvModel = cv.fit(ds)
+    val p = cvModel.transform(ds)
     assert(p.collect.nonEmpty)
     new File(tmpdir.toUri).delete()
 
