@@ -160,6 +160,10 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     Array(assembler, labeler, weight, lr)
   }
 
+  // private def deepLearningPipeline(): Array[PipelineStage] = {
+    //val mcWord2Vec = new MultiColumnPipeline().new GloveEstimator().setInputCol
+  // }
+
   def copy(extra: ParamMap): QuoraQuestionsPairsPipeline = defaultCopy(extra)
 
   def setStopwordsRemover(value: StopWordsRemover): this.type = set(stopwordsRemover, value)

@@ -2,10 +2,9 @@ package com.worldsense.kaggle
 
 import com.intel.analytics.bigdl.Criterion
 import com.intel.analytics.bigdl.nn._
-import com.intel.analytics.bigdl.tensor.Tensor
 import org.apache.spark.ml.param.{Param, ParamMap}
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
-import org.apache.spark.ml.{DLClassifier, DLEstimator, DLModel, Estimator}
+import org.apache.spark.ml.{DLEstimator, DLModel, Estimator}
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
 
