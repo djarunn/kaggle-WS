@@ -34,22 +34,22 @@ class GloveEstimator(override val uid: String) extends Estimator[GloveModel] wit
 }
 
 object GloveEstimator extends DefaultParamsReadable[GloveEstimator] {
-  def load(spark: SparkSession, path: String): Map[String, Array[Double]] = {
+  def load(spark: SparkSession, path: String): Map[String, Array[Float]] = {
     import spark.implicits._
     val vectors = spark.read.text(path).as[String].map { line =>
       val values = line.split(" ")
       val word = values(0)
-      val coefs = values.slice(1, values.length).map(_.toDouble)
+      val coefs = values.slice(1, values.length).map(_.toFloat)
       (word, coefs)
     }
     vectors.collect.toMap
   }
 }
 
-class GloveModel(override val uid: String, private val word2vec: Map[String, Array[Double]]) extends Model[GloveModel] with GloveParams {
+class GloveModel(override val uid: String, private val word2vec: Map[String, Array[Float]]) extends Model[GloveModel] with GloveParams {
   assert(word2vec.values.map(_.length).toSeq.distinct.length == 1)
   private val dimensions = word2vec.headOption.map(_._2.length).getOrElse(0)
-  protected def outputDataType: DataType = new ArrayType(ArrayType(DoubleType, false), false)
+  protected def outputDataType: DataType = new ArrayType(ArrayType(FloatType, false), false)
   protected def validateInputType(inputType: DataType) = {}  // todo(implement me)
   override def transformSchema(schema: StructType): StructType = {
     val inputType = schema($(inputCol)).dataType
@@ -65,7 +65,7 @@ class GloveModel(override val uid: String, private val word2vec: Map[String, Arr
   override def transform(ds: Dataset[_]): DataFrame = {
     val gloveBC = ds.sparkSession.sparkContext.broadcast(word2vec)
     val vectorizeUDF = udf((tokens: Seq[String]) => tokens.map { token =>
-      gloveBC.value.getOrElse(token, Array.fill[Double](dimensions)(0))
+      gloveBC.value.getOrElse(token, Array.fill[Float](dimensions)(0))
     }, outputDataType)
     ds.withColumn($(outputCol), vectorizeUDF(ds($(inputCol))))
   }
