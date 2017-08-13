@@ -31,21 +31,16 @@ class Lstm(override val uid: String) extends Estimator[DLModel[Float]] with Defa
   final def setNumClasses(value: Int) = set(numClasses, value)
 
   override def transformSchema(schema: StructType): StructType = {
-    schema
-    // assembleNeuralNetwork().transformSchema(schema)
+    assembleNeuralNetwork().transformSchema(schema)
   }
-  override def fit(dataset: Dataset[_]): DLModel[Float] = {
-    val estimator = assembleNeuralNetwork(dataset)
-    estimator.fit(dataset)
-  }
-  private def assembleNeuralNetwork(df: Dataset[_]): DLEstimator[Float] = {
+  override def fit(dataset: Dataset[_]): DLModel[Float] = assembleNeuralNetwork().fit(dataset)
+  private def assembleNeuralNetwork(): DLEstimator[Float] = {
+    val padding = 25
     val nn: Sequential[Float] = new Sequential[Float]()
+      .add(Padding(2, padding, 3))
       .add(Recurrent[Float]()
         .add(LSTM($(embeddingDim), $(hiddenDim))))
       .add(Select(2, -1))
-      .add(Linear($(hiddenDim), 100))
-      .add(Linear(100, $(numClasses)))
-      .add(LogSoftMax())
     val criterion: Criterion[Float] = new ClassNLLCriterion[Float]()
     val estimator = new DLEstimator[Float](nn, criterion, Array(1, $(embeddingDim)), Array($(numClasses)))
     estimator.setFeaturesCol($(featuresCol))

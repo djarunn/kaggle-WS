@@ -1,5 +1,5 @@
 package com.worldsense.kaggle
-
+import org.apache.spark.ml.linalg.Vector
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
 import org.scalatest.FlatSpec
 
@@ -13,9 +13,12 @@ class GloveTest extends FlatSpec with DataFrameSuiteBase {
   it should "transform input" in {
     import spark.implicits._
     val tokens = spark.createDataset(Seq(Array("token", "supercalifragilistibonitao", "TOKEN")))
-    val estimator = new GloveEstimator().setVectorsPath(gloveFile).setInputCol("value")
+    val x = "/tmp/news20/glove.6B/glove.6B.100d.txt"
+    val estimator = new GloveEstimator().setVectorsPath(x).setInputCol("value").setOutputCol("vector").setSentenceLength(4)
     val model = estimator.fit(tokens)
     val vectors = model.transform(tokens).collect()
-    assert(vectors.nonEmpty)
+    assert(vectors.length === 1)
+    val sentenceVector = vectors.head.getAs[Vector]("vector")
+    assert(sentenceVector.size === 4*100)
   }
 }

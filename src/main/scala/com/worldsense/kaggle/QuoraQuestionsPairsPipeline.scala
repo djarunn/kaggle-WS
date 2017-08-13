@@ -32,6 +32,9 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   val logisticRegression: Param[LogisticRegression] =
     new Param(this, "logisticRegression", "Combine question vectors pairs into a predicted probability.")
   setDefault(logisticRegression, new LogisticRegression())
+  val glove: Param[GloveEstimator] =
+    new Param(this, "glove", "Combine question vectors pairs into a predicted probability.")
+  setDefault(glove, new GloveEstimator())
   private val questionsCols = Array("question1", "question2")
 
   def this() = this(Identifiable.randomUID("quoraquestionspairspipeline"))
@@ -42,6 +45,7 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     val stages = Array(
       cleanerPipeline(),
       tokenizePipeline(),
+      // deepLearningPipeline()
       vectorizePipeline(),
       ldaPipeline(),
       logisticRegressionPipeline()
@@ -160,9 +164,28 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     Array(assembler, labeler, weight, lr)
   }
 
-  // private def deepLearningPipeline(): Array[PipelineStage] = {
-    //val mcWord2Vec = new MultiColumnPipeline().new GloveEstimator().setInputCol
-  // }
+  private def deepLearningPipeline(): Array[PipelineStage] = {
+    val mcWord2Vec = new MultiColumnPipeline()
+      .setStage($(glove))
+      .setInputCols(questions("tokens"))
+      .setOutputCols(questions("vectors"))
+    val assembler = new VectorAssembler().setInputCols(questions("vectors")).setOutputCol("mergedvectors")
+    val labeler = Seq(
+      new SQLTransformer().setStatement(
+        s"SELECT *, cast(isDuplicate as int) isDuplicateLabel from __THIS__"),  // for eval
+      new SQLTransformer().setStatement(s"SELECT *, IF(isDuplicate, 1.0, 2.0) label1 from __THIS__"),
+      new SQLTransformer().setStatement(s"SELECT *, IF(isDuplicate, 2.0, 1.0) label2 from __THIS__"),
+      new VectorAssembler().setInputCols(Array("label1", "label2")).setOutputCol("labels"),
+      new ColumnPruner().setInputCols(Array("label1", "label2"))
+    )
+    val lstm = new Lstm()
+      .setFeaturesCol("mergedvectors")
+      .setLabelCol("labels")
+      .setPredictionCol("parray")
+      .setNumClasses(1)
+      .setEmbeddingDim(100)
+    Array(mcWord2Vec, assembler) ++ labeler :+ lstm
+  }
 
   def copy(extra: ParamMap): QuoraQuestionsPairsPipeline = defaultCopy(extra)
 
@@ -173,4 +196,6 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   def setLDA(value: LDA): this.type = set(lda, value)
 
   def setLogisticRegression(value: LogisticRegression): this.type = set(logisticRegression, value)
+
+  def setGlove(value: GloveEstimator): this.type = set(glove, value)
 }

@@ -3,8 +3,6 @@ package com.worldsense.kaggle
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
 import com.intel.analytics.bigdl.utils.Engine
 import org.apache.spark.SparkConf
-import org.apache.spark.ml.linalg.Vectors
-import org.apache.spark.mllib.linalg.VectorUDT
 import org.scalatest.FlatSpec
 
 class LstmTest extends FlatSpec with DataFrameSuiteBase {
