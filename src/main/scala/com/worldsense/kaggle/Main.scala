@@ -1,6 +1,7 @@
 package com.worldsense.kaggle
 
 import com.github.fommil.netlib.BLAS
+import com.intel.analytics.bigdl.utils.Engine
 import net.sourceforge.argparse4j.ArgumentParsers
 import net.sourceforge.argparse4j.inf.ArgumentParserException
 import org.apache.spark.SparkConf
@@ -10,9 +11,8 @@ import scala.util.{Failure, Try}
 
 object Main extends App {
   private val logger = org.log4s.getLogger
-  private val sparkConf = new SparkConf()
-    .set("spark.driver.memory", "6g")
-    .setMaster("local[*]")
+  private val sparkConf = Engine.createSparkConf(
+    new SparkConf().set("spark.driver.memory", "6g").setMaster("local[*]"))
   private val featuresLoader = new FeaturesLoader()
   private val parser = ArgumentParsers.newArgumentParser("kaggle")
     .description("Train and evaluate a model for kaggle's  quora questions pair challenge.")
@@ -28,6 +28,7 @@ object Main extends App {
     Failure(e)
   } foreach { res =>
     val spark = SparkSession.builder.config(sparkConf).appName("kaggle").getOrCreate()
+    Engine.init
     logger.info(s"BLAS backend is ${BLAS.getInstance().getClass.getName}")
     run(spark, res.getString("trainingDataFile"), res.getString("testDataFile"), res.getString("submissionFile"))
     spark.stop

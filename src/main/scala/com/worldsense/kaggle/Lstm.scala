@@ -46,7 +46,7 @@ class Lstm(override val uid: String) extends Estimator[DLModel[Float]] with Defa
     estimator.setFeaturesCol($(featuresCol))
     estimator.setLabelCol($(labelCol))
     estimator.setPredictionCol($(predictionCol))
-    estimator.setBatchSize(1)
+    estimator.setBatchSize(4)
     estimator
   }
   override def copy(extra: ParamMap): Lstm = defaultCopy(extra)

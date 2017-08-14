@@ -7,6 +7,19 @@
   <version>0.0.1</version>
   <name>kaggle</name>
   <description>Jar for kaggle</description>
+  <repositories>
+    <repository>
+      <id>sonatype</id>
+      <name>sonatype repository</name>
+      <url>https://oss.sonatype.org/content/groups/public/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -16,14 +29,14 @@
     <maven.compiler.testSource>1.8</maven.compiler.testSource>
     <scala.version>2.11.8</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
-    <spark.version>2.1.0</spark.version>
+    <spark.version>2.0.0</spark.version>
     <scalatest.version>3.0.1</scalatest.version>
     <bigdl.version>0.2.0</bigdl.version>
   </properties>
   <dependencies>
     <dependency>
       <groupId>com.intel.analytics.bigdl</groupId>
-      <artifactId>bigdl-SPARK_2.1</artifactId>
+      <artifactId>bigdl-SPARK_2.0</artifactId>
       <version>${bigdl.version}</version>
     </dependency>
     <dependency>
@@ -36,6 +49,16 @@
           <artifactId>bigdl-native</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.scalanlp</groupId>
+      <artifactId>breeze_${scala.binary.version}</artifactId>
+      <version>0.13.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scalanlp</groupId>
+      <artifactId>breeze-macros_${scala.binary.version}</artifactId>
+      <version>0.13.1</version>
     </dependency>
     <dependency>
       <groupId>net.sourceforge.argparse4j</groupId>

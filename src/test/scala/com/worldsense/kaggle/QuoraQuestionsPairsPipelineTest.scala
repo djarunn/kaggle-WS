@@ -5,13 +5,12 @@ import com.intel.analytics.bigdl.utils.Engine
 import com.worldsense.kaggle.FeaturesLoader.Features
 import org.apache.spark.SparkConf
 import org.apache.spark.ml.clustering.LDA
-import org.apache.spark.sql.functions.{col, udf}
 import org.scalatest.FlatSpec
 
 import scala.util.Random
 
 class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
-  override def conf: SparkConf = Engine.createSparkConf(super.conf.setMaster("local[1]"))
+  override def conf: SparkConf = Engine.createSparkConf(super.conf.setMaster("local[*]"))
   val rng = new Random(1)
   val features = (1 until 100).map { i =>
     val isDuplicate = rng.nextBoolean()
@@ -28,16 +27,11 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
     // Tune LDA to make learning easier since vocab is very small
     estimator.setLDA(new LDA().setK(3))
     estimator.setGlove(new GloveEstimator().setVectorsPath("/tmp/news20/glove.6B/glove.6B.100d.txt"))
-    val u = udf(QuoraQuestionsPairsPipelineTest.isDuplicateArray _)
-    val ds = spark.createDataset(features).withColumn("isDuplicateArray", u(col("isDuplicate")))
-    val p = estimator.fit(ds).transform(ds)
+    val ds = spark.createDataset(features)
+    val m = estimator.fit(ds)
+    val p = m.transform(ds)
     assert(p.count() === features.length)
     val dupCount = p.select("prediction").as[Double].collect().count(_ > 0)
     assert(dupCount >= 1 && dupCount <= 99)  // learned something
-  }
-}
-object QuoraQuestionsPairsPipelineTest {
-  def isDuplicateArray(isDuplicate: Boolean): Array[Float] = {
-    if (isDuplicate) Array(0.0f, 1.0f) else Array(1.0f, 0.0f)
   }
 }

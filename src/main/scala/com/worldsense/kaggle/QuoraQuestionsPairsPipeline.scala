@@ -45,10 +45,10 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     val stages = Array(
       cleanerPipeline(),
       tokenizePipeline(),
-      // deepLearningPipeline()
-      vectorizePipeline(),
-      ldaPipeline(),
-      logisticRegressionPipeline()
+      deepLearningPipeline()
+      // vectorizePipeline(),
+      // ldaPipeline(),
+      // logisticRegressionPipeline()
     ).flatten
     new Pipeline().setStages(stages)
   }
@@ -56,14 +56,16 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     logger.info(s"Preparing to fit quora question pipeline.")
     val model = assemblePipeline().fit(dataset)
     logMetrics(model, dataset)
-    logTopics(dataset.sparkSession, model)
+    // logTopics(dataset.sparkSession, model)
     model
   }
   private val logger = org.log4s.getLogger
   private def logMetrics(model: PipelineModel, dataset: Dataset[_]): Unit = {
     import dataset.sparkSession.implicits.newProductEncoder
-    val labeledDataset = model.transform(dataset).select("p", "isDuplicateLabel").as[(DenseVector, Int)]
-    labeledDataset.cache()  // will be used multiple times
+    val transformedDataset = model.transform(dataset)
+    transformedDataset.cache().count()
+    val labeledDataset = transformedDataset.select("p", "isDuplicateLabel").as[(DenseVector, Int)]
+    labeledDataset.cache().count()  // will be used multiple times
     val scoresAndLabels = labeledDataset map { case (p, label) =>
       (p.values.last, label.toDouble)  // the last of values is the probability of the positive class
     }
@@ -156,7 +158,7 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
       s"SELECT *, cast(isDuplicate as int) $labelCol from __THIS__")
     // See https://www.kaggle.com/davidthaler/how-many-1-s-are-in-the-public-lb
     val weight = new SQLTransformer().setStatement(
-      s"SELECT *, IF(isDuplicate, 0.47, 1.3) lrw from __THIS__")
+      s"SELECT *, IF(isDuplicate, cast(0.47 as double), cast(1.3 as double)) lrw from __THIS__")
     val lr = $(logisticRegression)
         .setFeaturesCol("mergedlda").setProbabilityCol("p").setRawPredictionCol("raw")
         .setWeightCol("lrw")
@@ -184,7 +186,13 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
       .setPredictionCol("parray")
       .setNumClasses(1)
       .setEmbeddingDim(100)
-    Array(mcWord2Vec, assembler) ++ labeler :+ lstm
+    val predictor = Seq(
+      new SQLTransformer().setStatement(
+        s"SELECT *, parray[0] as p0, parray[1] as p1 from __THIS__"),
+      new VectorAssembler().setInputCols(Array("p0", "p1")).setOutputCol("p"),
+      new ColumnPruner().setInputCols(Array("parray", "p0", "p1"))
+    )
+    Array(mcWord2Vec, assembler) ++ labeler ++ Array(lstm) ++ predictor
   }
 
   def copy(extra: ParamMap): QuoraQuestionsPairsPipeline = defaultCopy(extra)

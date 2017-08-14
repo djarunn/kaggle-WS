@@ -26,6 +26,7 @@ trait GloveParams extends Params {
 class GloveEstimator(override val uid: String) extends Estimator[GloveModel] with GloveParams with DefaultParamsWritable {
   val vectorsPath: Param[String] = new Param(this, "vectorsPath", "path for the file with the vectors")
   def setVectorsPath(value: String): this.type = set(vectorsPath, value)
+  setDefault(vectorsPath, "/tmp/news20/glove.6B/glove.6B.100d.txt")
   val normalizer: Param[Transformer] = new Param(this, "normalize", "normalize tokens")
   def this() = this(Identifiable.randomUID("word2vec"))
   def copy(extra: ParamMap): GloveEstimator = defaultCopy(extra)
