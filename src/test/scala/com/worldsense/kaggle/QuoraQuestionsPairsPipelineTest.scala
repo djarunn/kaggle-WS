@@ -26,7 +26,7 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
     val estimator = new QuoraQuestionsPairsPipeline()
     // Tune LDA to make learning easier since vocab is very small
     estimator.setLDA(new LDA().setK(3))
-    estimator.setGlove(new GloveEstimator().setVectorsPath("/tmp/news20/glove.6B/glove.6B.100d.txt"))
+    estimator.setGlove(new GloveEstimator().setVectorsPath("/tmp/news20/glove.6B/glove.6B.100d.txt").setSentenceLength(10))
     val ds = spark.createDataset(features)
     val m = estimator.fit(ds)
     val p = m.transform(ds)

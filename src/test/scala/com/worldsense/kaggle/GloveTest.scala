@@ -14,7 +14,11 @@ class GloveTest extends FlatSpec with DataFrameSuiteBase {
     import spark.implicits._
     val tokens = spark.createDataset(Seq(Array("token", "supercalifragilistibonitao", "TOKEN")))
     val x = "/tmp/news20/glove.6B/glove.6B.100d.txt"
-    val estimator = new GloveEstimator().setVectorsPath(x).setInputCol("value").setOutputCol("vector").setSentenceLength(4)
+    val estimator = new GloveEstimator()
+      .setVectorsPath(x)
+      .setInputCol("value")
+      .setOutputCol("vector")
+      .setSentenceLength(4)
     val model = estimator.fit(tokens)
     val vectors = model.transform(tokens).collect()
     assert(vectors.length === 1)

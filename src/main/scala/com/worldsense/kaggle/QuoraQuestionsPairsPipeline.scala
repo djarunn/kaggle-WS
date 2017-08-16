@@ -1,5 +1,6 @@
 package com.worldsense.kaggle
 
+import com.intel.analytics.bigdl.utils.Engine
 import org.apache.spark.ml.{Estimator, Pipeline, PipelineModel, PipelineStage}
 import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.clustering.{LDA, LDAModel}
@@ -10,7 +11,7 @@ import org.apache.spark.ml.util.Identifiable
 import org.apache.spark.mllib.evaluation.{BinaryClassificationMetrics, MultilabelMetrics}
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.functions.{udf, col}
+import org.apache.spark.sql.functions.{col, udf}
 
 
 class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[PipelineModel] {
@@ -172,27 +173,18 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
       .setInputCols(questions("tokens"))
       .setOutputCols(questions("vectors"))
     val assembler = new VectorAssembler().setInputCols(questions("vectors")).setOutputCol("mergedvectors")
-    val labeler = Seq(
-      new SQLTransformer().setStatement(
-        s"SELECT *, cast(isDuplicate as int) isDuplicateLabel from __THIS__"),  // for eval
-      new SQLTransformer().setStatement(s"SELECT *, IF(isDuplicate, 1.0, 2.0) label1 from __THIS__"),
-      new SQLTransformer().setStatement(s"SELECT *, IF(isDuplicate, 2.0, 1.0) label2 from __THIS__"),
-      new VectorAssembler().setInputCols(Array("label1", "label2")).setOutputCol("labels"),
-      new ColumnPruner().setInputCols(Array("label1", "label2"))
-    )
+    val labeler = new SQLTransformer().setStatement(
+        s"SELECT *, cast(isDuplicate as double) isDuplicateLabel from __THIS__")
+    val labeler2 = new SQLTransformer().setStatement(
+      s"SELECT *, isDuplicateLabel + 1 isDuplicateDlLabel from __THIS__")
     val lstm = new Lstm()
       .setFeaturesCol("mergedvectors")
-      .setLabelCol("labels")
-      .setPredictionCol("parray")
-      .setNumClasses(1)
+      .setLabelCol("isDuplicateDlLabel")
+      .setPredictionCol("p")
       .setEmbeddingDim(100)
-    val predictor = Seq(
-      new SQLTransformer().setStatement(
-        s"SELECT *, parray[0] as p0, parray[1] as p1 from __THIS__"),
-      new VectorAssembler().setInputCols(Array("p0", "p1")).setOutputCol("p"),
-      new ColumnPruner().setInputCols(Array("parray", "p0", "p1"))
-    )
-    Array(mcWord2Vec, assembler) ++ labeler ++ Array(lstm) ++ predictor
+      .setPaddingLength($(glove).getSentenceLength * 2)  // redundant
+      .setBatchSize(1)   // needs to match bigdl.corenumber
+    Array(mcWord2Vec, assembler, labeler, labeler2, lstm)
   }
 
   def copy(extra: ParamMap): QuoraQuestionsPairsPipeline = defaultCopy(extra)
