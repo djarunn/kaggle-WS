@@ -9,7 +9,7 @@ import org.scalatest.FlatSpec
 
 class LstmTest extends FlatSpec with DataFrameSuiteBase {
   override def conf: SparkConf = Engine.createSparkConf(super.conf.setMaster("local[1]").setIfMissing("spark.sql.warehouse.dir", Files.createTempDirectory("spark-warehouse").toString))
-  val features = (0 until 100).map { i =>
+  val features = (0 until 91).map { i =>
     val sentence = if (i % 2 > 0) Seq(Seq(7.0f, 9.0f, 4.0f, 2.0f, 2.0f)) else Seq(Seq(3.0f, 5.0f, 8.0f, 2.0f, 2.0f))
     val label = if (i % 2 > 0) 1.0 else 2.0
     (sentence, label)

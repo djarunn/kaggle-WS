@@ -36,6 +36,9 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   val glove: Param[GloveEstimator] =
     new Param(this, "glove", "Combine question vectors pairs into a predicted probability.")
   setDefault(glove, new GloveEstimator())
+  val lstm: Param[Lstm] =
+    new Param(this, "lstm", "Combine question vectors pairs into a predicted probability.")
+  setDefault(lstm, new Lstm())
   private val questionsCols = Array("question1", "question2")
 
   def this() = this(Identifiable.randomUID("quoraquestionspairspipeline"))
@@ -46,8 +49,8 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     val stages = Array(
       cleanerPipeline(),
       tokenizePipeline(),
+      vectorizePipeline(),
       deepLearningPipeline()
-      // vectorizePipeline(),
       // ldaPipeline(),
       // logisticRegressionPipeline()
     ).flatten
@@ -56,7 +59,7 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   override def fit(dataset: Dataset[_]): PipelineModel = {
     logger.info(s"Preparing to fit quora question pipeline.")
     val model = assemblePipeline().fit(dataset)
-    logMetrics(model, dataset)
+    // logMetrics(model, dataset)
     // logTopics(dataset.sparkSession, model)
     model
   }
@@ -170,21 +173,20 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   private def deepLearningPipeline(): Array[PipelineStage] = {
     val mcWord2Vec = new MultiColumnPipeline()
       .setStage($(glove))
-      .setInputCols(questions("tokens"))
-      .setOutputCols(questions("vectors"))
-    val assembler = new VectorAssembler().setInputCols(questions("vectors")).setOutputCol("mergedvectors")
+     .setInputCols(questions("tokens"))
+     .setOutputCols(questions("vectors"))
+    val assembler = new VectorAssembler().setInputCols(questions("tfidf")).setOutputCol("mergedvectors")
     val labeler = new SQLTransformer().setStatement(
         s"SELECT *, cast(isDuplicate as double) isDuplicateLabel from __THIS__")
     val labeler2 = new SQLTransformer().setStatement(
       s"SELECT *, isDuplicateLabel + 1 isDuplicateDlLabel from __THIS__")
-    val lstm = new Lstm()
+    val lstmEstimator = $(lstm)
       .setFeaturesCol("mergedvectors")
       .setLabelCol("isDuplicateDlLabel")
       .setPredictionCol("p")
-      .setEmbeddingDim(100)
       .setPaddingLength($(glove).getSentenceLength * 2)  // redundant
-      .setBatchSize(1)   // needs to match bigdl.corenumber
-    Array(mcWord2Vec, assembler, labeler, labeler2, lstm)
+    // Array(mcWord2Vec, assembler, labeler, labeler2, lstmEstimator)
+    Array(mcWord2Vec, assembler, labeler, labeler2, lstmEstimator)
   }
 
   def copy(extra: ParamMap): QuoraQuestionsPairsPipeline = defaultCopy(extra)
@@ -198,4 +200,5 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   def setLogisticRegression(value: LogisticRegression): this.type = set(logisticRegression, value)
 
   def setGlove(value: GloveEstimator): this.type = set(glove, value)
+  def setLstm(value: Lstm): this.type = set(lstm, value)
 }

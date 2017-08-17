@@ -25,13 +25,13 @@ class Lstm(override val uid: String) extends Estimator[DLModel[Float]] with Defa
   final def getFeaturesCol: String = $(featuresCol)
   final def getPredictionCol: String = $(predictionCol)
   final def getEmbeddingDim: Int = $(embeddingDim)
-  final def setLabelCol(col: String) = set(labelCol, col)
-  final def setFeaturesCol(col: String) = set(featuresCol, col)
-  final def setPredictionCol(col: String) = set(predictionCol, col)
-  final def setEmbeddingDim(value: Int) = set(embeddingDim, value)
-  final def setPaddingLength(value: Int) = set(paddingLength, value)
-  final def setBatchSize(value: Int) = set(batchSize, value)
-  final def setHiddenDim(value: Int) = set(hiddenDim, value)
+  final def setLabelCol(col: String): this.type = set(labelCol, col)
+  final def setFeaturesCol(col: String): this.type = set(featuresCol, col)
+  final def setPredictionCol(col: String): this.type = set(predictionCol, col)
+  final def setEmbeddingDim(value: Int): this.type = set(embeddingDim, value)
+  final def setPaddingLength(value: Int): this.type = set(paddingLength, value)
+  final def setBatchSize(value: Int): this.type = set(batchSize, value)
+  final def setHiddenDim(value: Int): this.type = set(hiddenDim, value)
 
   override def transformSchema(schema: StructType): StructType = {
     assembleNeuralNetwork().transformSchema(schema)
@@ -42,7 +42,7 @@ class Lstm(override val uid: String) extends Estimator[DLModel[Float]] with Defa
     // The input vector for the neural network has batchSize x Padding x Dimension length, and is assembled
     // from the dataset with rows of Padding x Dimension float 1d vectors.
     val nn: Sequential[Float] = new Sequential[Float]()
-      .add(Padding(2, $(paddingLength), 3))
+      //.add(Padding(2, $(paddingLength), 3))
       .add(Recurrent[Float]()
          .add(LSTM($(embeddingDim), $(hiddenDim))))
       .add(Select(2, -1))

@@ -47,6 +47,7 @@ class GloveEstimator(override val uid: String) extends Estimator[GloveModel] wit
   }
   override def fit(dataset: Dataset[_]): GloveModel = {
     val vectors = GloveEstimator.load(dataset.sparkSession, $(vectorsPath))
+    assert(vectors.values.map(_.length).toSeq.distinct.length == 1)
     new GloveModel(uid, vectors)
       .setParent(this)
       .setInputCol($(inputCol))
@@ -87,6 +88,7 @@ class GloveModel(override val uid: String, private val word2vec: Map[String, Arr
     val gloveBC = ds.sparkSession.sparkContext.broadcast(word2vec)
     val vectorizeUDF = udf((tokens: Seq[String]) => {
       val vectors = GloveModel.vectorize(gloveBC.value, tokens, $(sentenceLength))
+      assert(vectors.flatten.length == $(sentenceLength) * 100)
       Vectors.dense(vectors.flatten.map(_.toDouble).toArray)
     }, outputDataType)
     ds.withColumn($(outputCol), vectorizeUDF(ds($(inputCol))))
