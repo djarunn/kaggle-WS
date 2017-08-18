@@ -55,7 +55,7 @@ class Lstm(override val uid: String) extends Estimator[DLModel[Float]] with Defa
       .add(Linear($(hiddenDim), numClasses))
       .add(SoftMax())
     val criterion: Criterion[Float] = new ClassNLLCriterion[Float]()
-    val estimator = new DLClassifier[Float](nn, criterion, Array($(paddingLength), $(embeddingDim)))
+    val estimator = new DLEstimator[Float](nn, criterion, Array($(paddingLength), $(embeddingDim)), Array(1))
     estimator.setFeaturesCol($(featuresCol))
     estimator.setLabelCol($(labelCol))
     estimator.setPredictionCol($(predictionCol))

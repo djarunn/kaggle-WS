@@ -178,7 +178,7 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
     val labeler = Seq(
       new SQLTransformer().setStatement(s"SELECT *, cast(isDuplicate as int) isDuplicateLabel from __THIS__"),
       new SQLTransformer().setStatement(s"SELECT *, IF(isDuplicate, cast(1 as double), cast(0 as double)) isDuplicateDouble from __THIS__"),
-      new SQLTransformer().setStatement(s"SELECT *, IF(isDuplicate, array(isDuplicateDouble, isDuplicateDouble + 1.0), array(isDuplicateDouble + 2.0, isDuplicateDouble + 1.0)) isDuplicateDlLabel from __THIS__")
+      new SQLTransformer().setStatement(s"SELECT *, array(isDuplicateDouble + 1.0) isDuplicateDlLabel from __THIS__")
     )
     val lstmEstimator = $(lstm)
       .setFeaturesCol("mergedvectors")

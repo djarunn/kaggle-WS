@@ -17,7 +17,7 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
   val features = (0 until 64).map { i =>
     val isDuplicate = rng.nextBoolean()
     val question1 = if (rng.nextBoolean()) "dunno" else "either"
-    val question2 = if (rng.nextBoolean()) "noise" else if (isDuplicate) "i'am a dup." else "i am not: doubled"
+    val question2 = if (isDuplicate) "i'am a dup." else "i am not: doubled"
     Features(id = i, qid1 = rng.nextInt(100), qid2 = rng.nextInt(100),
       question1 = question1, question2 = question2,
       isDuplicate = isDuplicate)
@@ -31,7 +31,7 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
     estimator.setLDA(new LDA().setK(3))
     estimator
       .setGlove(new GloveEstimator().setVectorsPath(gloveFile).setSentenceLength(2))
-      .setLstm(new Lstm().setBatchSize(8).setEmbeddingDim(7).setHiddenDim(8))
+      .setLstm(new Lstm().setBatchSize(8).setEmbeddingDim(7).setHiddenDim(8).setMaxEpoch(50))
     val ds = spark.createDataset(features)
     val m = estimator.fit(ds)
     val p = m.transform(ds)
