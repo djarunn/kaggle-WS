@@ -1,7 +1,7 @@
 package com.worldsense.kaggle
 
 import com.github.fommil.netlib.BLAS
-import com.intel.analytics.bigdl.utils.Engine
+import com.intel.analytics.bigdl.utils.{Engine, LoggerFilter}
 import net.sourceforge.argparse4j.ArgumentParsers
 import net.sourceforge.argparse4j.inf.ArgumentParserException
 import org.apache.spark.SparkConf
@@ -29,6 +29,7 @@ object Main extends App {
   } foreach { res =>
     val spark = SparkSession.builder.config(sparkConf).appName("kaggle").getOrCreate()
     Engine.init
+    LoggerFilter.redirectSparkInfoLogs()
     logger.info(s"BLAS backend is ${BLAS.getInstance().getClass.getName}")
     run(spark, res.getString("trainingDataFile"), res.getString("testDataFile"), res.getString("submissionFile"))
     spark.stop
@@ -44,11 +45,12 @@ object Main extends App {
     trainData.cache()   // we will use this repeatedly
     val cvModel = crossValidator.fit(trainData)
     val bestParams = cvModel.getEstimatorParamMaps.zip(cvModel.avgMetrics).maxBy(_._2)._1
+    logger.info(s"Cross validated a mdoel yield hyperparams:\n${bestParams.toString}")
 
     // Train on all data."
     val estimator = new QuoraQuestionsPairsPipeline().copy(bestParams)
     val model = estimator.fit(trainData)
-    logger.info(s"Trained final model with params:\n${bestParams.toString}")
+    logger.info(s"Trained final model.")
 
     val testData = featuresLoader.loadTestFile(spark, testDataFile)
     val submissionWriter = new SubmissionWriter().setModel(model)

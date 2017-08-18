@@ -1,6 +1,7 @@
 package com.worldsense.kaggle
 
 import java.nio.file.Files
+import com.intel.analytics.bigdl.utils.LoggerFilter
 
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
 import com.intel.analytics.bigdl.utils.Engine
@@ -19,6 +20,7 @@ class LstmTest extends FlatSpec with DataFrameSuiteBase {
   }
   "Lstm" should "transform input" in {
     Engine.init
+    LoggerFilter.redirectSparkInfoLogs()
     import spark.implicits._
     assert(features.flatMap(_._1.map(_.length)).distinct.length <= 1)
     val batchSize = 16
