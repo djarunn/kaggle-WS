@@ -37,7 +37,7 @@ class Lstm(override val uid: String) extends Estimator[DLModel[Float]] with Defa
     assembleNeuralNetwork().transformSchema(schema)
   }
   override def fit(dataset: Dataset[_]): DLModel[Float] = assembleNeuralNetwork().fit(dataset)
-  private def assembleNeuralNetwork(): DLClassifier[Float] = {
+  private def assembleNeuralNetwork(): DLEstimator[Float] = {
     val numClasses = 2   // simplifies code and we do no need to support multiclass
     // The input vector for the neural network has batchSize x Padding x Dimension length, and is assembled
     // from the dataset with rows of Padding x Dimension float 1d vectors.
@@ -49,11 +49,12 @@ class Lstm(override val uid: String) extends Estimator[DLModel[Float]] with Defa
       .add(Linear($(hiddenDim), numClasses))
       .add(LogSoftMax())
     val criterion: Criterion[Float] = new ClassNLLCriterion[Float]()
-    val estimator = new DLClassifier[Float](nn, criterion, Array($(paddingLength), $(embeddingDim)))
+    val estimator = new DLEstimator[Float](nn, criterion, Array($(paddingLength), $(embeddingDim)), Array(1))
     estimator.setFeaturesCol($(featuresCol))
     estimator.setLabelCol($(labelCol))
     estimator.setPredictionCol($(predictionCol))
     estimator.setBatchSize($(batchSize))
+    estimator.setMaxEpoch(5)
     estimator
   }
   override def copy(extra: ParamMap): Lstm = defaultCopy(extra)

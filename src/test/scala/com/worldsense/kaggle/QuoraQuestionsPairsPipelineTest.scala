@@ -23,18 +23,19 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
   }
   "QuoraQuestionsPairsPipeline" should "train a simple model" in {
     Engine.init
-    import spark.implicits.{newDoubleEncoder, newProductEncoder}
+    import spark.implicits.newProductEncoder
+    val gloveFile = getClass.getResource("/glove/glove.6B.7d.sample.txt").getFile
     val estimator = new QuoraQuestionsPairsPipeline()
     // Tune LDA to make learning easier since vocab is very small
     estimator.setLDA(new LDA().setK(3))
     estimator
-      .setGlove(new GloveEstimator().setVectorsPath("/tmp/news20/glove.6B/glove.6B.100d.txt").setSentenceLength(2))
-      .setLstm(new Lstm().setBatchSize(8).setEmbeddingDim(1).setHiddenDim(8))
+      .setGlove(new GloveEstimator().setVectorsPath(gloveFile).setSentenceLength(2))
+      .setLstm(new Lstm().setBatchSize(8).setEmbeddingDim(7).setHiddenDim(8))
     val ds = spark.createDataset(features)
     val m = estimator.fit(ds)
-    m.save("/Users/davi/lstm.model")
-    //val p = m.transform(ds)
-    //assert(p.count() === features.length)
+    val p = m.transform(ds)
+    p.show
+    assert(p.count() === features.length)
     //val dupCount = p.select("prediction").as[Double].collect().count(_ > 0)
     //assert(dupCount >= 1 && dupCount <= 99)  // learned something
   }

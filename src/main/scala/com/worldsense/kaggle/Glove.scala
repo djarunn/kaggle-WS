@@ -15,12 +15,12 @@ trait GloveParams extends Params {
   final def getOutputCol: String = $(outputCol)
   final val sentenceLength: Param[Int] = new Param[Int](this, "sentenceLength", "output column name")
   final def getSentenceLength: Int = $(sentenceLength)
-  def setInputCol(value: String): this.type = set(inputCol, value)
-  def setOutputCol(value: String): this.type = set(outputCol, value)
-  def setSentenceLength(value: Int): this.type = set(sentenceLength, value)
   setDefault(outputCol, uid + "__output")
   setDefault(inputCol, uid + "__input")
   setDefault(sentenceLength, 25)
+  def setInputCol(value: String): this.type = set(inputCol, value)
+  def setOutputCol(value: String): this.type = set(outputCol, value)
+  def setSentenceLength(value: Int): this.type = set(sentenceLength, value)
 }
 
 class GloveEstimator(override val uid: String) extends Estimator[GloveModel] with GloveParams with DefaultParamsWritable {
@@ -48,11 +48,12 @@ class GloveEstimator(override val uid: String) extends Estimator[GloveModel] wit
   override def fit(dataset: Dataset[_]): GloveModel = {
     val vectors = GloveEstimator.load(dataset.sparkSession, $(vectorsPath))
     assert(vectors.values.map(_.length).toSeq.distinct.length == 1)
-    new GloveModel(uid, vectors)
+    val model = new GloveModel(uid, vectors)
       .setParent(this)
       .setInputCol($(inputCol))
       .setOutputCol($(outputCol))
       .setSentenceLength($(sentenceLength))
+    model
   }
 }
 
@@ -88,15 +89,16 @@ class GloveModel(override val uid: String, private val word2vec: Map[String, Arr
     val gloveBC = ds.sparkSession.sparkContext.broadcast(word2vec)
     val vectorizeUDF = udf((tokens: Seq[String]) => {
       val vectors = GloveModel.vectorize(gloveBC.value, tokens, $(sentenceLength))
-      assert(vectors.flatten.length == $(sentenceLength) * 100)
       Vectors.dense(vectors.flatten.map(_.toDouble).toArray)
     }, outputDataType)
-    ds.withColumn($(outputCol), vectorizeUDF(ds($(inputCol))))
+    val transformed = ds.withColumn($(outputCol), vectorizeUDF(ds($(inputCol))))
+    transformed
   }
   def copy(extra: ParamMap): GloveModel = {
     new GloveModel(uid, word2vec)
       .setInputCol($(inputCol))
       .setOutputCol($(outputCol))
+      .setSentenceLength($(sentenceLength))
   }
 }
 

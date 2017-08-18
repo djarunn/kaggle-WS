@@ -1,6 +1,5 @@
 package com.worldsense.kaggle
 
-import com.intel.analytics.bigdl.utils.Engine
 import org.apache.spark.ml.{Estimator, Pipeline, PipelineModel, PipelineStage}
 import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.clustering.{LDA, LDAModel}
@@ -59,7 +58,7 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
   override def fit(dataset: Dataset[_]): PipelineModel = {
     logger.info(s"Preparing to fit quora question pipeline.")
     val model = assemblePipeline().fit(dataset)
-    // logMetrics(model, dataset)
+    logMetrics(model, dataset)
     // logTopics(dataset.sparkSession, model)
     model
   }
@@ -175,18 +174,24 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
       .setStage($(glove))
      .setInputCols(questions("tokens"))
      .setOutputCols(questions("vectors"))
-    val assembler = new VectorAssembler().setInputCols(questions("tfidf")).setOutputCol("mergedvectors")
-    val labeler = new SQLTransformer().setStatement(
-        s"SELECT *, cast(isDuplicate as double) isDuplicateLabel from __THIS__")
-    val labeler2 = new SQLTransformer().setStatement(
-      s"SELECT *, isDuplicateLabel + 1 isDuplicateDlLabel from __THIS__")
+    val assembler = new VectorAssembler().setInputCols(questions("vectors")).setOutputCol("mergedvectors")
+    val labeler = Seq(
+      new SQLTransformer().setStatement(s"SELECT *, cast(isDuplicate as int) isDuplicateLabel from __THIS__"),
+      new SQLTransformer().setStatement(s"SELECT *, IF(isDuplicate, cast(1 as double), cast(0 as double)) isDuplicateDouble from __THIS__"),
+      new SQLTransformer().setStatement(s"SELECT *, IF(isDuplicate, array(isDuplicateDouble, isDuplicateDouble + 1.0), array(isDuplicateDouble + 2.0, isDuplicateDouble + 1.0)) isDuplicateDlLabel from __THIS__")
+    )
     val lstmEstimator = $(lstm)
       .setFeaturesCol("mergedvectors")
       .setLabelCol("isDuplicateDlLabel")
-      .setPredictionCol("p")
+      .setPredictionCol("parray")
       .setPaddingLength($(glove).getSentenceLength * 2)  // redundant
-    // Array(mcWord2Vec, assembler, labeler, labeler2, lstmEstimator)
-    Array(mcWord2Vec, assembler, labeler, labeler2, lstmEstimator)
+    val classifier = Seq(
+      // Convert the array to a vector
+      new SQLTransformer().setStatement(
+        s"SELECT *, parray[0] as p0, parray[1] as p1 from __THIS__"),
+       new VectorAssembler().setInputCols(Array("p0", "p1")).setOutputCol("p")
+    )
+    Array(mcWord2Vec, assembler) ++ labeler ++ Array(lstmEstimator) ++ classifier
   }
 
   def copy(extra: ParamMap): QuoraQuestionsPairsPipeline = defaultCopy(extra)
