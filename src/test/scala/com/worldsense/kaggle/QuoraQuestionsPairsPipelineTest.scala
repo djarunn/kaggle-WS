@@ -5,6 +5,7 @@ import com.intel.analytics.bigdl.utils.Engine
 import com.worldsense.kaggle.FeaturesLoader.Features
 import org.apache.spark.SparkConf
 import org.apache.spark.ml.clustering.LDA
+import org.apache.spark.ml.linalg.Vector
 import org.scalatest.FlatSpec
 
 import scala.util.Random
@@ -34,9 +35,7 @@ class QuoraQuestionsPairsPipelineTest extends FlatSpec with DataFrameSuiteBase {
     val ds = spark.createDataset(features)
     val m = estimator.fit(ds)
     val p = m.transform(ds)
-    p.show
-    assert(p.count() === features.length)
-    //val dupCount = p.select("prediction").as[Double].collect().count(_ > 0)
-    //assert(dupCount >= 1 && dupCount <= 99)  // learned something
+    val (dup, not) = p.rdd.map(_.getAs[Vector]("p").toArray.head).collect().partition(_ > 0.5)
+    assert(dup.length > 20 && not.length > 20)
   }
 }

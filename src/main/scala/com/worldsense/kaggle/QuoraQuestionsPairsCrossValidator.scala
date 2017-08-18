@@ -62,9 +62,11 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
     val paramGrid = new ParamGridBuilder()
       .addGrid(stopwordsRemover.stopWords, stopwordsLists)
       .addGrid(idf.minDocFreq, $(minDocFreq))
+      /*
       .addGrid(lda.k, $(numTopics))
       .addGrid(lda.maxIter, $(ldaMaxIter))
       .addGrid(logisticRegression.maxIter, $(logisticRegressionMaxIter))
+      */
       .build()
 
     val evaluator = new LogLossBinaryClassificationEvaluator()

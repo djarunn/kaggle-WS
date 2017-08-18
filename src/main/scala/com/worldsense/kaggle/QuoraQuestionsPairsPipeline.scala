@@ -184,7 +184,7 @@ class QuoraQuestionsPairsPipeline(override val uid: String) extends Estimator[Pi
       .setFeaturesCol("mergedvectors")
       .setLabelCol("isDuplicateDlLabel")
       .setPredictionCol("parray")
-      .setPaddingLength($(glove).getSentenceLength * 2)  // redundant
+      .setPaddingLength($(glove).getSentenceLength * 2)
     val classifier = Seq(
       // Convert the array to a vector
       new SQLTransformer().setStatement(
