@@ -4,12 +4,15 @@ import java.io.File
 import java.nio.file.{Files, Path, Paths}
 
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
+import com.intel.analytics.bigdl.utils.Engine
 import com.worldsense.kaggle.FeaturesLoader.Features
+import org.apache.spark.SparkConf
 import org.scalatest.FlatSpec
 
 import scala.util.Random
 
 class QuoraQuestionsPairsCrossValidatorTest extends FlatSpec with DataFrameSuiteBase {
+  override def conf: SparkConf = Engine.createSparkConf(super.conf.setMaster("local[1]").setIfMissing("spark.sql.warehouse.dir", Files.createTempDirectory("spark-warehouse").toString))
   val rng = new Random(2)
   val features = (1 until 100).map { i =>
     val isDuplicate = rng.nextBoolean()
@@ -20,6 +23,7 @@ class QuoraQuestionsPairsCrossValidatorTest extends FlatSpec with DataFrameSuite
       isDuplicate = isDuplicate)
   }
   "QuoraQuestionsPairsCrossValidator" should "test some params" in {
+    Engine.init
     import spark.implicits._
     val tmpdir: Path = Files.createTempDirectory("qqpcvtest")
     val cvDir: Path = Paths.get(tmpdir.toString, "cv")

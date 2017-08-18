@@ -27,11 +27,11 @@ class QuoraQuestionsPairsCrossValidator(override val uid: String) extends Estima
 
   final val minDocFreq: Param[List[Int]] = new Param[List[Int]](this, "minDF", "comma separate input column names")
   def setMinDocFreq(value: List[Int]): this.type = set(minDocFreq, value)
-  setDefault(minDocFreq, List(2, 5))
+  setDefault(minDocFreq, List(2))
 
   final val numTopics: Param[List[Int]] = new Param[List[Int]](this, "numTopics", "comma separate input column names")
   def setNumTopics(value: List[Int]): this.type = set(numTopics, value)
-  setDefault(numTopics, List(50, 100))
+  setDefault(numTopics, List(50))
 
   final val ldaMaxIter: Param[List[Int]] = new Param[List[Int]](this, "ldaMaxIter", "comma separate input column names")
   def setLdaMaxIter(value: List[Int]): this.type = set(ldaMaxIter, value)

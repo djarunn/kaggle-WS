@@ -50,7 +50,7 @@ class Lstm(override val uid: String) extends Estimator[DLModel[Float]] with Defa
     val nn: Sequential[Float] = new Sequential[Float]()
       //.add(Padding(1, $(paddingLength), 2))
       .add(Recurrent[Float]()
-         .add(LSTM($(embeddingDim), $(hiddenDim))))
+        .add(LSTM($(embeddingDim), $(hiddenDim))))
       .add(Select(2, -1))
       .add(Linear($(hiddenDim), numClasses))
       .add(SoftMax())
