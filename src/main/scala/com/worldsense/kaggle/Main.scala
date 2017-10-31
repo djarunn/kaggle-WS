@@ -45,7 +45,7 @@ object Main extends App {
     trainData.cache()   // we will use this repeatedly
     val cvModel = crossValidator.fit(trainData)
     val bestParams = cvModel.getEstimatorParamMaps.zip(cvModel.avgMetrics).maxBy(_._2)._1
-    logger.info(s"Cross validated a mdoel yield hyperparams:\n${bestParams.toString}")
+    logger.info(s"Cross validated model yielded hyperparams:\n${bestParams.toString}")
 
     // Train on all data."
     val estimator = new QuoraQuestionsPairsPipeline().copy(bestParams)

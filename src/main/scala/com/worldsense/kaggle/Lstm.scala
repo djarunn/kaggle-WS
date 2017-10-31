@@ -2,9 +2,12 @@ package com.worldsense.kaggle
 
 import com.intel.analytics.bigdl._
 import com.intel.analytics.bigdl.nn._
+import com.intel.analytics.bigdl.optim.{OptimMethod, Optimizer, SGD, Trigger}
+import com.intel.analytics.bigdl.utils.T
+import org.apache.spark.ml._
 import org.apache.spark.ml.param.{Param, ParamMap}
 import org.apache.spark.ml.util.{DefaultParamsReadable, DefaultParamsWritable, Identifiable}
-import org.apache.spark.ml._
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
 
@@ -22,7 +25,7 @@ class Lstm(override val uid: String) extends Estimator[DLModel[Float]] with Defa
   final val hiddenDim: Param[Int] = new Param[Int](this, "hiddenDim", "comma separate input column names")
   setDefault(hiddenDim, 32)
   final val maxEpoch: Param[Int] = new Param[Int](this, "maxEpoch", "comma separate input column names")
-  setDefault(maxEpoch, 100)
+  setDefault(maxEpoch, 20)
   final def getLabelCol: String = $(labelCol)
   final def getFeaturesCol: String = $(featuresCol)
   final def getPredictionCol: String = $(predictionCol)
@@ -42,7 +45,10 @@ class Lstm(override val uid: String) extends Estimator[DLModel[Float]] with Defa
   override def transformSchema(schema: StructType): StructType = {
     assembleNeuralNetwork().transformSchema(schema)
   }
-  override def fit(dataset: Dataset[_]): DLModel[Float] = assembleNeuralNetwork().fit(dataset)
+  override def fit(dataset: Dataset[_]): DLModel[Float] = {
+    val name = dataset.sparkSession.sparkContext.getConf.get("spark.app.name")
+    assembleNeuralNetwork().fit(dataset)
+  }
   private def assembleNeuralNetwork(): DLEstimator[Float] = {
     val numClasses = 2   // simplifies code and we do no need to support multiclass
     // The input vector for the neural network has batchSize x Padding x Dimension length, and is assembled
