@@ -12,7 +12,7 @@ import scala.util.{Failure, Try}
 object Main extends App {
   private val logger = org.log4s.getLogger
   private val sparkConf = Engine.createSparkConf(
-    new SparkConf().set("spark.driver.memory", "6g").setMaster("local[*]"))
+    new SparkConf().set("spark.driver.memory", "6g").setMaster("local[*]")).set("spark.sql.shuffle.partitions", "2048").set("spark.default.parallelism", "2048")
   private val featuresLoader = new FeaturesLoader()
   private val parser = ArgumentParsers.newArgumentParser("kaggle")
     .description("Train and evaluate a model for kaggle's  quora questions pair challenge.")
@@ -41,7 +41,9 @@ object Main extends App {
     logger.info(s"Cross validator for kaggle quora questions pairs will train $numVariations * ${crossValidator.numFolds} models")
 
     // Train with cross validation to get the best params.
-    val trainData = featuresLoader.loadTrainFile(spark, trainingDataFile)
+    import spark.implicits._
+    val trainData = spark.createDataset(featuresLoader.loadTrainFile(spark, trainingDataFile).rdd.repartition(2048))
+    logger.info(s"Loading training data with ${trainData.rdd.partitions.length} partitions")
     trainData.cache()   // we will use this repeatedly
     val cvModel = crossValidator.fit(trainData)
     val bestParams = cvModel.getEstimatorParamMaps.zip(cvModel.avgMetrics).maxBy(_._2)._1
